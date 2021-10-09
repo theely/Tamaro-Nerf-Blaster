@@ -4,14 +4,12 @@
 #define DShot_h
 
 //#define DSHOT_PORT VPORTB.OUT
-#define DSHOT_PORT VPORTB.OUT
+#define DSHOT_PORT VPORTF.OUT
 
 class DShot{
   public:
     enum Mode {
-      DSHOT600,
-      DSHOT300,
-      DSHOT150
+      DSHOT300
     };
     DShot(const enum Mode mode);
     void attach(uint8_t pin);
@@ -19,7 +17,6 @@ class DShot{
   private:
     uint16_t _packet = 0;
     uint16_t _throttle = 0;
-    uint8_t _pinMask = 0;
 };
 
 #endif

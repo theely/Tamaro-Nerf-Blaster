@@ -12,11 +12,11 @@ static uint8_t dShotPins = 0;
 
 
 
-#define DSHOT_BEEP_DELAY_US (260000/1000) //260ms is the max delay between frames
+//#define DSHOT_BEEP_DELAY_US (260000/1000) //260ms is the max delay between frames
 
 //#define DSHOT_BEEP_DELAY_US (100) //260ms is the max delay between frames
 
-
+#define DSHOT_BEEP_DELAY_US (400)
 
 //#define DSHOT_BEEP_DELAY_US (50000/1000)
 
@@ -34,7 +34,7 @@ int repete=0;
 int repete_counter=0;
 
 // Mode: 600/300/150
-static enum DShot::Mode dShotMode = DShot::Mode::DSHOT600;
+static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300;
 
 
 
@@ -65,63 +65,15 @@ static enum DShot::Mode dShotMode = DShot::Mode::DSHOT600;
     */
 
 static inline void sendData(){
-  if(repete_counter>0){
+  /*if(repete_counter>0){
     repete_counter--;
-  }
+  }*/
   if(delay_counter>0){
       delay_counter--;
       return;
     }
   
   switch (dShotMode) {
-  case DShot::Mode::DSHOT600:
-  default:
-    asm(
-
-    //Initialize loop i = 0 to 15:
-    "LDI  r23,  0\n"  //Load 0 into registry r23
-
-    // Set High for every attached pins
-    // DSHOT_PORT |= dShotPins;
-    "IN r25,  %0\n"   //Load values of (_SFR_IO_ADDR(DSHOT_PORT)) in r25
-
-    //FOR Loop
-    "_for_loop_0:\n"
-    "AND r25,  %2\n"     
-    // Wait 7 cycles (7 - 6 = 1)
-    // Wait 7 cycles (8 - 6 = 2)
-    NOP2
-
-    "OUT  %0, r25\n"
-    // Wait 10 cycles (10 - 4 = 6)
-    // Wait 12 cycles (12 - 4 = 8)
-    NOP4
-    NOP4
-    // Set Low for low bits only
-    //DSHOT_PORT &= dShotBits[i];
-    "LD r24,  Z+\n"
-    "OR  r25,  r24\n"           
-    "OUT  %0, r25\n"
-    // Wait 10 cycles (10 - 2 = 8)
-    // Wait 12 cycles (12 - 2 = 10)
-    NOP2
-    NOP8
-    // Turn off everything
-    // DSHOT_PORT &= ~dShotPins;
-    "OR  r25,  %1\n"
-    "OUT  %0, r25\n"
-    // Add to i (tmp_reg)
-    "INC  r23\n"
-    "CPI  r23,  16\n"       //Check if r23 < 0
-    "BRLO _for_loop_0\n"    //if true loop to _for_loop_0
-    // 7 cycles to next bit (4 to add to i and branch, 2 to turn on), no wait
-    :
-    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits) //InputOperands
-    : "r25", "r24", "r23" //Clobbers
-    );
-    break;
-
-
   /*
       DSHOT300 implementation
       For 20MHz CPU,
@@ -134,11 +86,11 @@ static inline void sendData(){
     asm(
     // For i = 0 to 15:
     "LDI  r23,  0\n"
-    // Set High for every attached pins
-    // DSHOT_PORT |= dShotPins;
+    // Set LOW for every attached pins
+    // DSHOT_PORT &= ~dShotPins;
     "IN r25,  %0\n"
     "_for_loop_1:\n"
-    "OR r25,  %1\n"  // 1 cycle
+    "AND r25,  %2\n"  // 1 cycle
     "OUT  %0, r25\n"  // 1 cycle
     //--- start frame 
     // Wait 21 cyles - what need to be computed to change the signal
@@ -148,10 +100,10 @@ static inline void sendData(){
     NOP4
     NOP
 
-    // Set Low for low bits only
-    //DSHOT_PORT &= dShotBits[i];
+    // Set HIGH for high bits only
+    //DSHOT_PORT |= dShotBits[i];
     "LD r24,  Z+\n"              // 2 cycle (1 to load, 1 for post increment) 
-    "AND  r25,  r24\n"            // 1 cycle
+    "OR  r25,  r24\n"          // 1 cycle
     "OUT  %0, r25\n"             // 1 cycle
  
     // Wait 23 cycles - what need to be computed to change the signal
@@ -162,9 +114,9 @@ static inline void sendData(){
     NOP2
     NOP
    
-    // Turn off everything
-    // DSHOT_PORT &= ~dShotPins;
-    "AND  r25,  %2\n"            // 1 cycle
+    // set HIGH dShotPins everything
+    // DSHOT_PORT |= dShotPins;
+    "OR  r25,  %1\n"            // 1 cycle
     "OUT  %0, r25\n"            // 1 cycle
 
     // Wait 10 cycles - what need to be computed to change the signal
@@ -182,83 +134,15 @@ static inline void sendData(){
     : "r25", "r24", "r23"
     );
     break;
-  case DShot::Mode::DSHOT150:
-    asm(
-    // For i = 0 to 15:
-    "LDI  r23,  0\n"
-    // Set High for every attached pins
-    // DSHOT_PORT |= dShotPins;
-    "IN r25,  %0\n"
-
-    "_for_loop_2:\n"
-    "OR r25,  %1\n"
-    // Wait 28 cycles (28 - 6 = 22)
-    // Wait 35 cycles (35 - 6 = 29)
-
-    // 1 + 3 * N //
-    "LDI  r26,  9\n"    // 1 // set N
-    "_sleep_loop_2_1:\n"
-    "DEC  r26\n"      // 1 //
-    "BRNE _sleep_loop_2_1\n"  // 2 //
-    "NOP\n"       // 1 // BRNE on skip uses only 1 cycle, not 2
-    // 1 + 3 * N //
-
-    "OUT  %0, r25\n"
-    // Wait 40 cycles (40 - 4 = 36)
-    // Wait 50 cycles (50 - 4 = 46)
-
-    // 1 + 3 * N //
-    "LDI  r26,  15\n"   // 1 // set N
-    "_sleep_loop_2_2:\n"
-    "DEC  r26\n"      // 1 //
-    "BRNE _sleep_loop_2_2\n"  // 2 //
-    "NOP\n"       // 1 // BRNE on skip uses only 1 cycle, not 2
-    // 1 + 3 * N //
-
-    //"NOP\n"
-    //"NOP\n"
-
-    // Set Low for low bits only
-    //DSHOT_PORT &= dShotBits[i];
-    "LD r24,  Z+\n"
-    "AND  r25,  r24\n"
-    "OUT  %0, r25\n"
-    // Wait 40 cycles (40 - 2 = 38)
-    // Wait 50 cycles (50 - 2 = 48)
-
-    // 1 + 3 * N //
-    "LDI  r26,  15\n"   // 1 // set N
-    "_sleep_loop_2_3:\n"
-    "DEC  r26\n"      // 1 //
-    "BRNE _sleep_loop_2_3\n"  // 2 //
-    "NOP\n"       // 1 // BRNE on skip uses only 1 cycle, not 2
-    // 1 + 3 * N //
-
-    "NOP\n"
-    "NOP\n"
-    //"NOP\n"
-    //"NOP\n"
-
-    // Turn off everything
-    // DSHOT_PORT &= ~dShotPins;
-    "AND  r25,  %2\n"
-    "OUT  %0, r25\n"
-    // Add to i (tmp_reg)
-    "INC  r23\n"
-    "CPI  r23,  16\n"
-    "BRLO _for_loop_2\n"
-    // 7 cycles to next bit (4 to add to i and branch, 2 to turn on), no wait
-    :
-    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits)
-    : "r25", "r24", "r23", "r26"
-    );
-    break;
   }
-  if(delay_command>0 && repete_counter<=0){
+  /*if(delay_command>0 && repete_counter<=0){
     delay_counter = delay_command;
   }
   if(repete>0 && delay_counter<=0){
     repete_counter = repete;
+  }*/
+  if(delay_command>0){
+    delay_counter = delay_command;
   }
 }
 
@@ -272,9 +156,10 @@ static void initISR(){
   //per_value = 0x320;                         // Value required for 200Hz 0xC34 (800) with prescalar at 64 at 20MHz
   //per_value = 0x270;                         // Value required for 500Hz 0x270 (624) with prescalar at 64 at 20MHz
   //per_value = 0x1F3;                         // Value required for 500Hz 0x1F3 (499) with prescalar at 64 at 16Mhz
-  per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
+  //per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
   //per_value = 0x31;                        // Value required for 5kHz 0x31 (49) with prescalar at 64
   //per_value = 0xC;                        // Value required for 20kHz 0xC (12) with prescalar at 64
+  per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
 
   
   TCA0.SINGLE.PER = per_value;                // Set period register
@@ -322,7 +207,7 @@ static inline uint16_t createPacket(uint16_t throttle){
     // append checksum
     if (true) {
         //Inverted Dshot to enable bi-directional 
-        //csum = ~csum;
+        csum = ~csum;
     }
 
     csum &= 0xf;
@@ -357,13 +242,12 @@ DShot::DShot(const enum Mode mode){
 
 void DShot::attach(uint8_t pin){
   this->_packet = 0;
-  this->_pinMask = digitalPinToBitMask(pin);
   pinMode(pin, OUTPUT);
-  digitalWrite(pin, LOW); //to disable PWM
+  digitalWrite(pin, HIGH); //to disable PWM
   if (!isTimerActive()){
     initISR();
   }
-  dShotPins |= this->_pinMask;
+  dShotPins |= digitalPinToBitMask(pin);
 }
 
 
@@ -376,12 +260,12 @@ uint16_t DShot::setThrottle(uint16_t throttle){
   this->_throttle = throttle;
   // TODO: This part can be further optimized when combine with create packet
   this->_packet = createPacket(throttle);
-  uint16_t mask = 0x8000;
+  uint16_t mask = 0x8000; //1000000000000000
   for (byte i=0; i<16; i++){
-    if (this->_packet & mask)
-      dShotBits[i] |= this->_pinMask;  //set to 0
+    if (!(this->_packet & mask))
+      dShotBits[i] |= dShotPins;  //set to 1
     else
-      dShotBits[i] &= ~(this->_pinMask); //set to 1
+      dShotBits[i] &= ~(dShotPins); //set to 0
 
     mask >>= 1;
   }

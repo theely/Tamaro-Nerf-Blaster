@@ -8,8 +8,8 @@ uint16_t target = 0;
 void setup() {
   // put your setup code here, to run once:
  Serial.begin(115200); 
- esc1.attach(5);
- //esc1.attach(3); //Multiple ports is not working
+ esc1.attach(6);
+ esc1.attach(3); //Multiple ports is not working
  //esc1.attach(20);  
  esc1.setThrottle(throttle);
 }
