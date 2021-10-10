@@ -1,4 +1,4 @@
-#include <Servo.h>
+#include "DShot.h"
 #include <EEPROM.h>
 #define SERIAL_SPEED      115200
 
@@ -37,7 +37,7 @@ ConfigParam config_params[4] = {
   ConfigParam{"pusher_pull_time",110,500,20,&configuration.pusher_pull_time},
   ConfigParam{"pusher_push_time",90,500,20,&configuration.pusher_push_time},
   ConfigParam{"esc_max_power",1650,1300,2000,&configuration.esc_max_power},
-  ConfigParam{"min_rampup_time"140,0,500,&configuration.min_rampup_time},
+  ConfigParam{"min_rampup_time",140,0,500,&configuration.min_rampup_time},
 };
 
 
@@ -66,8 +66,7 @@ int triggerPrevious = LOW;
 
 String serial_command;
 
-Servo ESC1;     // create servo object to control the ESC
-Servo ESC2;     // create servo object to control the ESC
+DShot ESC1(DShot::Mode::DSHOT300INV);
 
 
 
@@ -75,7 +74,7 @@ void setup() {
 
   Serial.begin(SERIAL_SPEED);
 
-
+ 
   pinMode(revPin, INPUT_PULLUP);
   pinMode(triggerPin, INPUT_PULLUP);
   pinMode(relay, OUTPUT);
@@ -83,9 +82,9 @@ void setup() {
   // Define pin #13 as output, for the LED
   pinMode(LED, OUTPUT);
 
-  // Attach the ESC on pin 5 and 3
-  ESC1.attach(5, 1000, 2000); // (pin, min pulse width, max pulse width in microseconds)
-  ESC2.attach(3, 1000, 2000); // (pin, min pulse width, max pulse width in microseconds)---------------------------------------------------------------
+  // Attach the ESC on pin 6 and 3
+  ESC1.attach(3);
+  ESC1.attach(6); 
 
   digitalWrite(relay, LOW);
 
@@ -100,6 +99,9 @@ void loop() {
     Serial.print("LiPo low:");
     Serial.println(vabt);
     }*/
+
+
+    
   if (Serial.available()) {
     serial_command = Serial.readStringUntil('\n');
     char* token = strtok(serial_command.c_str(), "= ,\r\n");
@@ -149,12 +151,10 @@ void loop() {
 
   if (state != Idle && state != Click1 && state != Command && state != Hold) {
     digitalWrite(LED, HIGH);
-    ESC1.write(configuration.esc_max_power);    // Send the signal to the ESC
-    ESC2.write(configuration.esc_max_power);    // Send the signal to the ESC
+    ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
   } else {
     digitalWrite(LED, LOW );
-    ESC1.write(1000);    // Send the signal to the ESC
-    ESC2.write(1000);    // Send the signal to the ESC0
+    ESC1.setThrottle(0);
   }
 
   if (state == Fire ) {
@@ -165,23 +165,37 @@ void loop() {
   }
 
   if (state == Command ) {
-    ESC1.write(1000);
-    ESC2.write(1000);
-    ESC1.write(1400);
-    delay(200);
-    ESC1.write(1000);
-    ESC2.write(1000);
-    delay(1000);
-    ESC2.write(1400);
-    delay(200);
-    ESC1.write(1000);
-    ESC2.write(1000);
+    ESC1.setThrottle(0);
+    delay(800);
+    //beep beeps[2];
+    //beeps[0]= {3, 300};
+    //beeps[1]= {1, 300};
+    //ESC1.sequenceBeep(beeps,2);
+    delay(800);  
     if (fireRate == Single) {
       fireRate = Burst;
+      //   short - 3
+      beep beeps[4];
+      beeps[0]= {3, 280};
+      beeps[1]= {3, 280};
+      beeps[2]= {3, 280};
+      beeps[3]= {1, 300};
+      ESC1.sequenceBeep(beeps,4);
     } else if (fireRate == Burst) {
-      fireRate = Auto;
+      fireRate = Auto;         
+      // short - long
+      beep beeps[2];
+      beeps[0]= {5, 280};
+      beeps[1]= {1, 280};
+      ESC1.sequenceBeep(beeps,2);
     } else {
       fireRate = Single;
+       //   short - short
+      beep beeps[2];
+      beeps[0]= {2, 280};
+      beeps[1]= {1, 300};
+      ESC1.sequenceBeep(beeps,2);
+      
     }
   }
 
