@@ -10,7 +10,8 @@ static uint8_t dShotBits[16];
 // Denote which pin is attached to dShot
 static uint8_t dShotPins = 0;
 
-
+static command commands[10];
+static uint8_t command_index=0;
 
 #define DSHOT_BEEP_DELAY_US (260)
 
@@ -27,9 +28,6 @@ int repete_counter=0;
 
 // Mode: 600/300/150
 static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
-
-
-
  
 
     /*
@@ -56,14 +54,44 @@ static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
       Total 27 cycle each bit        -> 1687.5 ns                (target: 1670ns)       
     */
 
+static inline void setPortBits(uint16_t packet){
+    uint16_t mask = 0x8000; //1000000000000000
+   for (byte i=0; i<16; i++){
+      bool isHigh = (packet & mask);
+      
+      switch (dShotMode) {
+          case DShot::Mode::DSHOT300INV:
+          isHigh = !isHigh;
+          break;
+      }
+      
+      if (isHigh)
+        dShotBits[i] |= dShotPins;  //set to 1
+      else
+        dShotBits[i] &= ~(dShotPins); //set to 0
+        
+      mask >>= 1;
+  }
+}
+    
+
 static inline void sendData(){
-  /*if(repete_counter>0){
-    repete_counter--;
-  }*/
+
   if(delay_counter>0){
       delay_counter--;
+      
       return;
-    }
+   }
+   struct command c = commands[command_index];
+   if(command_index>0){
+    Serial.print(command_index);
+    Serial.print("--");
+    Serial.println(c.delay_ms);
+    command_index--;
+   }
+    
+    
+   setPortBits(c.packet);
   
   switch (dShotMode) {
   /*
@@ -179,14 +207,9 @@ static inline void sendData(){
     );
     break;
   }
-  /*if(delay_command>0 && repete_counter<=0){
-    delay_counter = delay_command;
-  }
-  if(repete>0 && delay_counter<=0){
-    repete_counter = repete;
-  }*/
-  if(delay_command>0){
-    delay_counter = delay_command;
+ 
+  if(c.delay_ms>0){
+    delay_counter = c.delay_ms;
   }
 }
 
@@ -236,10 +259,9 @@ ISR(TCA0_CMP1_vect){
   Prepare data packet, attach 0 to telemetry bit, and calculate CRC
   throttle: 11-bit data
 */
-static inline uint16_t createPacket(uint16_t throttle){
+static inline uint16_t createPacket(uint16_t throttle, bool telemetry){
 
-
-    throttle = (throttle << 1) | (true ? 1 : 0);
+    throttle = (throttle << 1) | (telemetry ? 1 : 0);
 
 
     // compute checksum
@@ -286,41 +308,50 @@ void DShot::attach(uint8_t pin){
   Set the throttle value and prepare the data packet and store
   throttle: 11-bit data
 */
-uint16_t DShot::setThrottle(uint16_t throttle){
-  this->_throttle = throttle;
-  // TODO: This part can be further optimized when combine with create packet
-  this->_packet = createPacket(throttle);
-  uint16_t mask = 0x8000; //1000000000000000
+void DShot::setThrottle(uint16_t throttle){
+   
+   bool telemetry = false;
+   uint16_t delay_ms = 0;
+   if(throttle > 0 && throttle <48){  
+       telemetry = true;  //Some dShot commands need telemetry set to 1
+   }
 
-  
-  for (byte i=0; i<16; i++){
+  struct command c = {createPacket(throttle, telemetry), delay_ms};
 
-      bool isHigh = (this->_packet & mask);
-      
-      switch (dShotMode) {
-          case DShot::Mode::DSHOT300INV:
-          isHigh = !isHigh;
-          break;
-      }
-      
-      if (isHigh)
-        dShotBits[i] |= dShotPins;  //set to 1
-      else
-        dShotBits[i] &= ~(dShotPins); //set to 0
-        
-      mask >>= 1;
-  }
-  delay_command = 0;
-  repete=0;
-  
-  if(throttle > 0 && throttle <=5){
-    delay_command = DSHOT_BEEP_DELAY_US;
-    repete=1;
-  }
-  
-  
-  return _packet;
+  command_index=0;
+  commands[command_index]=c;
 }
+
+void DShot::singleBeep(){
+
+
+   bool telemetry = true;
+   uint16_t delay_ms = DSHOT_BEEP_DELAY_US;
+
+  struct command c = {createPacket(1, telemetry), delay_ms};
+
+  command_index=1;
+  commands[command_index]=c;
+}
+
+void DShot::sequenceBeep(beep beeps[], int beeps_count){
+   noInterrupts(); // stop interrupts
+   bool telemetry = true;
+   command_index=0;
+   for (int i = 0; i < beeps_count ; i++) {
+       command_index++;
+       beep b =  beeps[i];
+       Serial.print(b.tonality);
+       Serial.print("--");
+       Serial.println( b.delay_ms);
+       commands[command_index]={createPacket(b.tonality, telemetry), b.delay_ms};
+       
+   }
+   Serial.println("...");
+  interrupts(); // allow interrupts
+}
+
+
 
 //beacon
 

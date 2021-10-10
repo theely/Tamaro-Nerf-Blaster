@@ -9,45 +9,14 @@ void setup() {
   // put your setup code here, to run once:
  Serial.begin(115200); 
  esc1.attach(6);
- esc1.attach(3); //Multiple ports is not working
- //esc1.attach(20);  
+ esc1.attach(3);
  esc1.setThrottle(throttle);
 }
 
+int count=0;
+
 void loop() {
 
-  /*
-  // put your main code here, to run repeatedly:
-  if (Serial.available()>0){
-    int serial_int = Serial.parseInt();
-    if(serial_int>0){
-      target = serial_int;
-      Serial.println(target);
-      if (target>2047) target = 2047;
-    }
-    if(serial_int>=5000){
-      target = 0;
-      Serial.println(0);
-    }
-    
-  }
-  if (target<=48){
-    esc1.setThrottle(target);
-  }else{
-     if (throttle<48){
-        throttle = 48;
-      }
-    if (target>throttle){
-      throttle ++;
-      esc1.setThrottle(throttle);
-    }else if (target<throttle){
-      throttle --;
-      esc1.setThrottle(throttle);
-    }
-  }
-*/
-
-  
 
  if (Serial.available()>0){
     int serial_int = Serial.parseInt();
@@ -55,7 +24,35 @@ void loop() {
       if(serial_int >0 && serial_int <= 2047){
         throttle = serial_int;
       }
-      if(serial_int>=5000){
+      if(serial_int==6000){
+
+        if(count==0){
+          // short - long
+          beep beeps[2];
+          beeps[0]= {5, 220};
+          beeps[1]= {1, 260};
+          esc1.sequenceBeep(beeps,2);
+        }else if(count==1){
+           //   short - short
+          beep beeps[2];
+          beeps[0]= {2, 220};
+          beeps[1]= {1, 260};
+          esc1.sequenceBeep(beeps,2);
+        }else{
+            //   short - 3
+          beep beeps[4];
+          beeps[0]= {3, 220};
+          beeps[1]= {3, 220};
+          beeps[2]= {3, 220};
+          beeps[3]= {1, 260};
+          esc1.sequenceBeep(beeps,4);
+        }
+        count++;
+        count=count%3;
+        
+        return;
+      }
+      if(serial_int==5000){
         throttle = 0;
       }
       Serial.print("Command: ");
