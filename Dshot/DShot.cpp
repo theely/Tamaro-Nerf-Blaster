@@ -12,15 +12,7 @@ static uint8_t dShotPins = 0;
 
 
 
-//#define DSHOT_BEEP_DELAY_US (260000/1000) //260ms is the max delay between frames
-
-//#define DSHOT_BEEP_DELAY_US (100) //260ms is the max delay between frames
-
-#define DSHOT_BEEP_DELAY_US (400)
-
-//#define DSHOT_BEEP_DELAY_US (50000/1000)
-
-//#define DSHOT_BEEP_DELAY_US (260000/200) //260ms is the max delay between frames at 5Khz
+#define DSHOT_BEEP_DELAY_US (260)
 
 #define NOP  "NOP\n"
 #define NOP2 NOP NOP
@@ -34,7 +26,7 @@ int repete=0;
 int repete_counter=0;
 
 // Mode: 600/300/150
-static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300BIDIR;
+static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
 
 
 
@@ -82,7 +74,7 @@ static inline void sendData(){
       Total 67 cycle each bit        -> 3.33us                    (target: 3.35us )       
   */ 
       
-  case DShot::Mode::DSHOT300BIDIR:
+  case DShot::Mode::DSHOT300INV:
     asm(
     // For i = 0 to 15:
     "LDI  r23,  0\n"
@@ -209,9 +201,10 @@ static void initISR(){
   //per_value = 0x270;                         // Value required for 500Hz 0x270 (624) with prescalar at 64 at 20MHz
   //per_value = 0x1F3;                         // Value required for 500Hz 0x1F3 (499) with prescalar at 64 at 16Mhz
   //per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
+  per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
   //per_value = 0x31;                        // Value required for 5kHz 0x31 (49) with prescalar at 64
   //per_value = 0xC;                        // Value required for 20kHz 0xC (12) with prescalar at 64
-  per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
+  //per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
 
   
   TCA0.SINGLE.PER = per_value;                // Set period register
@@ -246,7 +239,7 @@ ISR(TCA0_CMP1_vect){
 static inline uint16_t createPacket(uint16_t throttle){
 
 
-    throttle = (throttle << 1) | (false ? 1 : 0);
+    throttle = (throttle << 1) | (true ? 1 : 0);
 
 
     // compute checksum
@@ -259,7 +252,7 @@ static inline uint16_t createPacket(uint16_t throttle){
 
      
   switch (dShotMode) {
-    case DShot::Mode::DSHOT300BIDIR:
+    case DShot::Mode::DSHOT300INV:
         csum = ~csum;
     break;
   }
@@ -305,7 +298,7 @@ uint16_t DShot::setThrottle(uint16_t throttle){
       bool isHigh = (this->_packet & mask);
       
       switch (dShotMode) {
-          case DShot::Mode::DSHOT300BIDIR:
+          case DShot::Mode::DSHOT300INV:
           isHigh = !isHigh;
           break;
       }

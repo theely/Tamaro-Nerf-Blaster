@@ -10,7 +10,7 @@ class DShot{
   public:
     enum Mode {
       DSHOT300,
-      DSHOT300BIDIR
+      DSHOT300INV
     };
     DShot(const enum Mode mode);
     void attach(uint8_t pin);
