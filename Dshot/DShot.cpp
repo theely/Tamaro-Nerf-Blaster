@@ -34,7 +34,7 @@ int repete=0;
 int repete_counter=0;
 
 // Mode: 600/300/150
-static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300;
+static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300BIDIR;
 
 
 
@@ -82,7 +82,7 @@ static inline void sendData(){
       Total 67 cycle each bit        -> 3.33us                    (target: 3.35us )       
   */ 
       
-  case DShot::Mode::DSHOT300:
+  case DShot::Mode::DSHOT300BIDIR:
     asm(
     // For i = 0 to 15:
     "LDI  r23,  0\n"
@@ -128,6 +128,58 @@ static inline void sendData(){
     "INC  r23\n"               // 1 cycle
     "CPI  r23,  16\n"          // 1 cycle
     "BRLO _for_loop_1\n"       // 2 cycle
+
+    :
+    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits)
+    : "r25", "r24", "r23"
+    );
+    break;
+    case DShot::Mode::DSHOT300:
+    asm(
+    // For i = 0 to 15:
+    "LDI  r23,  0\n"
+    // Set LOW for every attached pins
+    // DSHOT_PORT &= ~dShotPins;
+    "IN r25,  %0\n"
+    "_for_loop_2:\n"
+    "OR r25,  %1\n"  // 1 cycle
+    "OUT  %0, r25\n"  // 1 cycle
+    //--- start frame 
+    // Wait 21 cyles - what need to be computed to change the signal
+    // 21 = 25 - 4
+
+    NOP16
+    NOP4
+    NOP
+
+    // Set HIGH for high bits only
+    //DSHOT_PORT |= dShotBits[i];
+    "LD r24,  Z+\n"              // 2 cycle (1 to load, 1 for post increment) 
+    "AND  r25,  r24\n"          // 1 cycle
+    "OUT  %0, r25\n"             // 1 cycle
+ 
+    // Wait 23 cycles - what need to be computed to change the signal
+    // 23 = 25 - 4
+
+    NOP16
+    NOP4
+    NOP2
+    NOP
+   
+    // set HIGH dShotPins everything
+    // DSHOT_PORT |= dShotPins;
+    "AND  r25,  %2\n"            // 1 cycle
+    "OUT  %0, r25\n"            // 1 cycle
+
+    // Wait 10 cycles - what need to be computed to change the signal
+    // 10 = 17 - 7
+    NOP8
+    NOP2
+    
+    // Add to i (tmp_reg)
+    "INC  r23\n"               // 1 cycle
+    "CPI  r23,  16\n"          // 1 cycle
+    "BRLO _for_loop_2\n"       // 2 cycle
 
     :
     : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits)
@@ -204,33 +256,18 @@ static inline uint16_t createPacket(uint16_t throttle){
         csum ^=  csum_data;   // xor data by nibbles
         csum_data >>= 4;
     }
-    // append checksum
-    if (true) {
-        //Inverted Dshot to enable bi-directional 
+
+     
+  switch (dShotMode) {
+    case DShot::Mode::DSHOT300BIDIR:
         csum = ~csum;
-    }
+    break;
+  }
 
     csum &= 0xf;
     throttle = (throttle << 4) | csum;
 
     return throttle;
-
-  /*
-  throttle <<= 1;
-  
-  uint8_t csum = 0;
-  uint16_t csum_data = throttle;
-  for (byte i=0; i<3; i++){
-    csum ^= csum_data;
-    csum_data >>= 4;
-  }
-  csum &= 0xf;
-  return (throttle<<4)|csum;*/
-
-
-
-
-
   
 }
 
@@ -261,13 +298,24 @@ uint16_t DShot::setThrottle(uint16_t throttle){
   // TODO: This part can be further optimized when combine with create packet
   this->_packet = createPacket(throttle);
   uint16_t mask = 0x8000; //1000000000000000
-  for (byte i=0; i<16; i++){
-    if (!(this->_packet & mask))
-      dShotBits[i] |= dShotPins;  //set to 1
-    else
-      dShotBits[i] &= ~(dShotPins); //set to 0
 
-    mask >>= 1;
+  
+  for (byte i=0; i<16; i++){
+
+      bool isHigh = (this->_packet & mask);
+      
+      switch (dShotMode) {
+          case DShot::Mode::DSHOT300BIDIR:
+          isHigh = !isHigh;
+          break;
+      }
+      
+      if (isHigh)
+        dShotBits[i] |= dShotPins;  //set to 1
+      else
+        dShotBits[i] &= ~(dShotPins); //set to 0
+        
+      mask >>= 1;
   }
   delay_command = 0;
   repete=0;
