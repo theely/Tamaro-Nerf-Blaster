@@ -12,6 +12,7 @@ import {MatDividerModule} from '@angular/material/divider';
 import {MatSliderModule} from '@angular/material/slider';
 import {MatGridListModule} from '@angular/material/grid-list';
 import {MatCommonModule} from '@angular/material/core';
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 
 
 
@@ -30,7 +31,8 @@ import {MatCommonModule} from '@angular/material/core';
     MatCardModule,
     MatDividerModule,
     MatSliderModule,
-    MatGridListModule
+    MatGridListModule,
+    MatSlideToggleModule
   ],
   providers: [],
   bootstrap: [AppComponent]
