@@ -1,6 +1,6 @@
 #include "Arduino.h"
 #include "DShot.h"
-
+#include <CircularBuffer.h>
 
 // Each item contains the bit of the port
 // Pins that are not attached will always be 1
@@ -10,8 +10,9 @@ static uint8_t dShotBits[16];
 // Denote which pin is attached to dShot
 static uint8_t dShotPins = 0;
 
-static command commands[10];
-static uint8_t command_index=0;
+
+static CircularBuffer<command, 100> commands;
+static command permanent_commands;
 
 #define DSHOT_BEEP_DELAY_US (260)
 
@@ -77,17 +78,13 @@ static inline void setPortBits(uint16_t packet){
 
 static inline void sendData(){
 
-  if(delay_counter>0){
+   if(delay_counter>0){
       delay_counter--;
-      
       return;
    }
-   struct command c = commands[command_index];
-   if(command_index>0){
-    Serial.print(command_index);
-    Serial.print("--");
-    Serial.println(c.delay_ms);
-    command_index--;
+   struct command c = permanent_commands;
+   if(!commands.isEmpty()){
+    c = commands.shift();
    }
     
     
@@ -223,8 +220,8 @@ static void initISR(){
   //per_value = 0x320;                         // Value required for 200Hz 0xC34 (800) with prescalar at 64 at 20MHz
   //per_value = 0x270;                         // Value required for 500Hz 0x270 (624) with prescalar at 64 at 20MHz
   //per_value = 0x1F3;                         // Value required for 500Hz 0x1F3 (499) with prescalar at 64 at 16Mhz
-  //per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
-  per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
+  per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
+  //per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
   //per_value = 0x31;                        // Value required for 5kHz 0x31 (49) with prescalar at 64
   //per_value = 0xC;                        // Value required for 20kHz 0xC (12) with prescalar at 64
   //per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
@@ -315,39 +312,18 @@ void DShot::setThrottle(uint16_t throttle){
    if(throttle > 0 && throttle <48){  
        telemetry = true;  //Some dShot commands need telemetry set to 1
    }
-
-  struct command c = {createPacket(throttle, telemetry), delay_ms};
-
-  command_index=0;
-  commands[command_index]=c;
+  permanent_commands = {createPacket(throttle, telemetry), delay_ms};
+  //commands.clear();
 }
 
-void DShot::singleBeep(){
 
-
-   bool telemetry = true;
-   uint16_t delay_ms = DSHOT_BEEP_DELAY_US;
-
-  struct command c = {createPacket(1, telemetry), delay_ms};
-
-  command_index=1;
-  commands[command_index]=c;
-}
 
 void DShot::sequenceBeep(beep beeps[], int beeps_count){
    noInterrupts(); // stop interrupts
    bool telemetry = true;
-   command_index=0;
    for (int i = 0; i < beeps_count ; i++) {
-       command_index++;
-       beep b =  beeps[i];
-       Serial.print(b.tonality);
-       Serial.print("--");
-       Serial.println( b.delay_ms);
-       commands[command_index]={createPacket(b.tonality, telemetry), b.delay_ms};
-       
+       commands.push({createPacket(beeps[i].tonality, telemetry), beeps[i].delay_ms});
    }
-   Serial.println("...");
   interrupts(); // allow interrupts
 }
 
