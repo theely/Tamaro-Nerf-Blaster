@@ -80,15 +80,15 @@ void setup() {
   pinMode(relay, OUTPUT);
 
   // Define pin #13 as output, for the LED
-  pinMode(LED, OUTPUT);
-
-  // Attach the ESC on pin 6 and 3
-  ESC1.attach(3);
-  ESC1.attach(6); 
+  pinMode(LED, OUTPUT); 
 
   digitalWrite(relay, LOW);
 
   EEPROM.get( 0, configuration );
+
+  // Attach the ESC on pin 6 and 3
+  ESC1.attach(3);
+  ESC1.attach(6); 
 
 }
 
@@ -100,8 +100,6 @@ void loop() {
     Serial.println(vabt);
     }*/
 
-
-    
   if (Serial.available()) {
     serial_command = Serial.readStringUntil('\n');
     char* token = strtok(serial_command.c_str(), "= ,\r\n");
@@ -166,34 +164,30 @@ void loop() {
 
   if (state == Command ) {
     ESC1.setThrottle(0);
-    delay(800);
-    //beep beeps[2];
-    //beeps[0]= {3, 300};
-    //beeps[1]= {1, 300};
-    //ESC1.sequenceBeep(beeps,2);
-    delay(800);  
+    delay(800); 
+     
     if (fireRate == Single) {
       fireRate = Burst;
       //   short - 3
       beep beeps[4];
-      beeps[0]= {3, 280};
-      beeps[1]= {3, 280};
-      beeps[2]= {3, 280};
-      beeps[3]= {1, 300};
+      beeps[0]= {1, 260};
+      beeps[1]= {3, 260};
+      beeps[2]= {3, 260};
+      beeps[3]= {3, 260};
       ESC1.sequenceBeep(beeps,4);
     } else if (fireRate == Burst) {
       fireRate = Auto;         
       // short - long
       beep beeps[2];
-      beeps[0]= {5, 280};
-      beeps[1]= {1, 280};
+      beeps[0]= {1, 260};
+      beeps[1]= {5, 260};
       ESC1.sequenceBeep(beeps,2);
     } else {
       fireRate = Single;
        //   short - short
       beep beeps[2];
-      beeps[0]= {2, 280};
-      beeps[1]= {1, 300};
+      beeps[0]= {1, 260};
+      beeps[1]= {3, 260};
       ESC1.sequenceBeep(beeps,2);
       
     }
