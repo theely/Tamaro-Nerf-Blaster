@@ -1,6 +1,6 @@
 #include "DShot.h"
 
-DShot esc1(DShot::Mode::DSHOT300INV);
+DShot esc1(DShot::Mode::DSHOT300);
 
 uint16_t throttle = 48;
 uint16_t target = 0;

@@ -91,13 +91,17 @@ static inline void sendData(){
    setPortBits(c.packet);
   
   switch (dShotMode) {
-  /*
+
+
+    /*
       DSHOT300 implementation
-      For 20MHz CPU,
-      0: 25 cycle ON, 42 cycle OFF   -> 1.25us ON, 2.1us  OFF     (target: 1.25us / 2.08us) 
-      1: 50 cycle ON, 17 cycle OFF   -> 2.5us  ON, 0.85ns OFF     (target: 2.5ns / 0.83ns) 
-      Total 67 cycle each bit        -> 3.33us                    (target: 3.35us )       
-  */ 
+      For 16MHz CPU,
+      0: 20 cycle ON, 34 cycle OFF   -> 1.25us ON, 2.1us  OFF     (target: 1.25us / 2.08us) 
+      1: 40 cycle ON, 14 cycle OFF   -> 2.5us  ON, 0.85ns OFF     (target: 2.5ns / 0.83ns) 
+      Total 54 cycle each bit        -> 3.33us                    (target: 3.35us )       
+    */ 
+    
+  
       
   case DShot::Mode::DSHOT300INV:
     asm(
@@ -111,11 +115,10 @@ static inline void sendData(){
     "OUT  %0, r25\n"  // 1 cycle
     //--- start frame 
     // Wait 21 cyles - what need to be computed to change the signal
-    // 21 = 25 - 4
+    // 16 = 20 - 4
 
     NOP16
-    NOP4
-    NOP
+    NOP //tune
 
     // Set HIGH for high bits only
     //DSHOT_PORT |= dShotBits[i];
@@ -123,23 +126,22 @@ static inline void sendData(){
     "OR  r25,  r24\n"          // 1 cycle
     "OUT  %0, r25\n"             // 1 cycle
  
-    // Wait 23 cycles - what need to be computed to change the signal
-    // 23 = 25 - 4
+    // Wait 18 cycles - what need to be computed to change the signal
+    // 18 = 20 - 2
 
     NOP16
-    NOP4
     NOP2
-    NOP
-   
+    
+    
     // set HIGH dShotPins everything
     // DSHOT_PORT |= dShotPins;
     "OR  r25,  %1\n"            // 1 cycle
     "OUT  %0, r25\n"            // 1 cycle
 
     // Wait 10 cycles - what need to be computed to change the signal
-    // 10 = 17 - 7
-    NOP8
-    NOP2
+    // 10 = 14 - 7
+    
+    NOP8 //+1 NOP for tune
     
     // Add to i (tmp_reg)
     "INC  r23\n"               // 1 cycle
@@ -151,6 +153,10 @@ static inline void sendData(){
     : "r25", "r24", "r23"
     );
     break;
+
+
+    
+
     case DShot::Mode::DSHOT300:
     asm(
     // For i = 0 to 15:
@@ -163,11 +169,12 @@ static inline void sendData(){
     "OUT  %0, r25\n"  // 1 cycle
     //--- start frame 
     // Wait 21 cyles - what need to be computed to change the signal
-    // 21 = 25 - 4
+    // 16 = 20 - 4
 
-    NOP16
-    NOP4
-    NOP
+
+    NOP16 
+    NOP //tune
+
 
     // Set HIGH for high bits only
     //DSHOT_PORT |= dShotBits[i];
@@ -175,23 +182,22 @@ static inline void sendData(){
     "AND  r25,  r24\n"          // 1 cycle
     "OUT  %0, r25\n"             // 1 cycle
  
-    // Wait 23 cycles - what need to be computed to change the signal
-    // 23 = 25 - 4
+    // Wait 18 cycles - what need to be computed to change the signal
+    // 18 = 20 - 2
 
     NOP16
-    NOP4
     NOP2
-    NOP
+
    
     // set HIGH dShotPins everything
     // DSHOT_PORT |= dShotPins;
     "AND  r25,  %2\n"            // 1 cycle
     "OUT  %0, r25\n"            // 1 cycle
 
-    // Wait 10 cycles - what need to be computed to change the signal
-    // 10 = 17 - 7
-    NOP8
-    NOP2
+    // Wait 7 cycles - what need to be computed to change the signal
+    // 7 = 14 - 7
+    NOP8 //+1 NOP for tune
+
     
     // Add to i (tmp_reg)
     "INC  r23\n"               // 1 cycle
