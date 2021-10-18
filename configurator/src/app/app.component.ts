@@ -22,6 +22,9 @@ export class AppComponent implements OnInit{
                'min_rampup_time':140,
              };
 
+isSingleShot:any;
+isBurstShots:any;
+isFullAuto:any;
 
  ngOnInit() {
 

@@ -79,12 +79,19 @@
   <mat-card-title>Fire Modes</mat-card-title>
   <mat-card-subtitle></mat-card-subtitle>
 
+<ul style="   list-style-type: none;">
+  <li>
+    <mat-slide-toggle [(ngModel)]="isSingleShot">Single shot</mat-slide-toggle>
+  </li>
+  <li>
+    <mat-slide-toggle [(ngModel)]="isBurstShots">Burst shots</mat-slide-toggle>
+  </li>
+  <li>
+    <mat-slide-toggle [(ngModel)]="isFullAuto">Full auto</mat-slide-toggle>
+    </li>
+    </ul>
 
-    <mat-slide-toggle [(ngModel)]="isChecked">Single shot</mat-slide-toggle>
-    <mat-slide-toggle [(ngModel)]="isChecked">Burst shots</mat-slide-toggle>
-    <mat-slide-toggle [(ngModel)]="isChecked">Full auto</mat-slide-toggle>
 
-  
 </mat-card>
 
 
