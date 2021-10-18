@@ -10,11 +10,15 @@ int triggerPin = 7;
 int relay = 2;
 String version = "0.1";
 
+
+#define CONFIGURATION_VERSION  5
+
 struct Confing {
   int  pusher_pull_time; //time required for the pusher to move
   int  pusher_push_time; //time required for the pusher to move
   int  esc_max_power;
   int  min_rampup_time; //time required for the flywheel to get up to speed
+  int  config_version; //IMPORTANT: increment config version for every change of this struct
 };
 
 
@@ -23,6 +27,7 @@ Confing configuration = {
   90,  //pusher_push_time -- min: 55 (tested)
   1650, //esc_max_power
   140, //min_rampup_time
+  CONFIGURATION_VERSION
 };
 
 struct ConfigParam {
@@ -67,6 +72,7 @@ int triggerPrevious = LOW;
 String serial_command;
 
 DShot ESC1(DShot::Mode::DSHOT300INV);
+DShot ESC2(DShot::Mode::DSHOT300INV);
 
 
 
@@ -84,11 +90,21 @@ void setup() {
 
   digitalWrite(relay, LOW);
 
-  EEPROM.get( 0, configuration );
+
+  Confing configuration_check;
+  EEPROM.get( 0, configuration_check );
+  if(configuration_check.config_version !=  configuration.config_version){
+     //Config structure has changed reset config.
+     Serial.println("Config structure mismatch detected");
+     EEPROM.put(0, configuration);
+     Serial.println("Re-setted configuration");
+  }else{
+    EEPROM.get( 0, configuration);
+  }
 
   // Attach the ESC on pin 6 and 3
   ESC1.attach(3);
-  ESC1.attach(6); 
+  ESC2.attach(6); 
 
 }
 
@@ -150,9 +166,11 @@ void loop() {
   if (state != Idle && state != Click1 && state != Command && state != Hold) {
     digitalWrite(LED, HIGH);
     ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
+    ESC2.setThrottle(configuration.esc_max_power-200);    // Send the signal to the ESC
   } else {
     digitalWrite(LED, LOW );
     ESC1.setThrottle(0);
+    ESC2.setThrottle(0);
   }
 
   if (state == Fire ) {
@@ -199,6 +217,7 @@ enum states getState() {
 
   int revValue = !digitalRead(revPin);
   int triggerValue = !digitalRead(triggerPin);
+
 
   //Detect Changes
   bool commandValid = false;

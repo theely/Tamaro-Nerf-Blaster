@@ -7,11 +7,9 @@
 // This is to offload the Off pattern calculation during bit send
 static uint8_t dShotBits[16];
 
-// Denote which pin is attached to dShot
-static uint8_t dShotPins = 0;
 
-static command commands[10];
-static uint8_t command_index=0;
+static DShot * escs[8];
+static uint8_t connected_escs=0;
 
 #define DSHOT_BEEP_DELAY_US (260)
 
@@ -21,13 +19,10 @@ static uint8_t command_index=0;
 #define NOP8 NOP4 NOP4
 #define NOP16 NOP8 NOP8
 
-int delay_command = 0;
-int delay_counter = 0;
-int repete=0;
-int repete_counter=0;
+
 
 // Mode: 600/300/150
-static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
+//static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
  
 
     /*
@@ -46,67 +41,64 @@ static enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
       Total 67 cycle each bit        -> 3.33us                    (target: 3.35us )       
     */ 
 
+    /*
+      DSHOT600 implementation
+      For 16MHz CPU,
+      0: 10 cycle ON, 17 cycle OFF   -> 625ns ON, 1'062.5ns OFF  (target: 618ns  / 10452ns) 
+      1: 20 cycle ON, 7 cycle OFF    -> 1250ns ON, 437.5ns OFF   (target: 1250ns / 418ns) 
+      Total 27 cycle each bit        -> 1687.5 ns                (target: 1670ns)       
+    */
 
-
-   
-
-static inline void setPortBits(uint16_t packet){
+static inline void setPortBits(uint16_t packet, DShot * esc){
     uint16_t mask = 0x8000; //1000000000000000
    for (byte i=0; i<16; i++){
       bool isHigh = (packet & mask);
       
-      switch (dShotMode) {
+      switch (esc->dShotMode) {
           case DShot::Mode::DSHOT300INV:
           isHigh = !isHigh;
           break;
       }
       
       if (isHigh)
-        dShotBits[i] |= dShotPins;  //set to 1
+        dShotBits[i] |= esc->dShotPins;  //set to 1
       else
-        dShotBits[i] &= ~(dShotPins); //set to 0
+        dShotBits[i] &= ~(esc->dShotPins); //set to 0
         
       mask >>= 1;
   }
 }
-    
 
-static inline void sendData(){
 
-  if(delay_counter>0){
-      delay_counter--;
-      
+static inline void sendEscData(DShot * esc){
+
+
+
+   if(esc->delay_counter>0){
+      esc->delay_counter--;
       return;
    }
-   struct command c = commands[command_index];
-   if(command_index>0){
-    Serial.print(command_index);
-    Serial.print("--");
-    Serial.println(c.delay_ms);
-    command_index--;
+   struct command c =  esc->permanent_command;
+   if(! esc->commands.isEmpty()){
+    c =  esc->commands.shift();
    }
     
     
-   setPortBits(c.packet);
+   setPortBits(c.packet, esc);
+
   
-  switch (dShotMode) {
-  /*
+  switch (esc->dShotMode) {
+
+
+    /*
       DSHOT300 implementation
-      For 20MHz CPU,
-      0: 25 cycle ON, 42 cycle OFF   -> 1.25us ON, 2.1us  OFF     (target: 1.25us / 2.08us) 
-      1: 50 cycle ON, 17 cycle OFF   -> 2.5us  ON, 0.85ns OFF     (target: 2.5ns / 0.83ns) 
-      Total 67 cycle each bit        -> 3.33us                    (target: 3.35us )    
-
-     DSHOT 300
-     BF 0: 1.12us - 2.2us = 3.32
-     BF 1: 2.2us - 1.11us = 3.32
-     BF p: 3.34us
-
-     T 0: 1.28 - 2.12 = 3.4us
-     T 1: 2.56 - 0.8 = 3.4us
-
-
-  */ 
+      For 16MHz CPU,
+      0: 20 cycle ON, 34 cycle OFF   -> 1.25us ON, 2.1us  OFF     (target: 1.25us / 2.08us) 
+      1: 40 cycle ON, 14 cycle OFF   -> 2.5us  ON, 0.85ns OFF     (target: 2.5ns / 0.83ns) 
+      Total 54 cycle each bit        -> 3.33us                    (target: 3.35us )       
+    */ 
+    
+  
       
   case DShot::Mode::DSHOT300INV:
     asm(
@@ -120,10 +112,10 @@ static inline void sendData(){
     "OUT  %0, r25\n"  // 1 cycle
     //--- start frame 
     // Wait 21 cyles - what need to be computed to change the signal
-    // 21 = 25 - 4
+    // 16 = 20 - 4
 
     NOP16
-    NOP
+    NOP //tune
 
     // Set HIGH for high bits only
     //DSHOT_PORT |= dShotBits[i];
@@ -131,8 +123,8 @@ static inline void sendData(){
     "OR  r25,  r24\n"          // 1 cycle
     "OUT  %0, r25\n"             // 1 cycle
  
-    // Wait 23 cycles - what need to be computed to change the signal
-    // 23 = 25 - 2
+    // Wait 18 cycles - what need to be computed to change the signal
+    // 18 = 20 - 2
 
     NOP16
     NOP2
@@ -144,8 +136,9 @@ static inline void sendData(){
     "OUT  %0, r25\n"            // 1 cycle
 
     // Wait 10 cycles - what need to be computed to change the signal
-    // 10 = 17 - 7
-    NOP8
+    // 10 = 14 - 7
+    
+    NOP8 //+1 NOP for tune
     
     // Add to i (tmp_reg)
     "INC  r23\n"               // 1 cycle
@@ -153,21 +146,14 @@ static inline void sendData(){
     "BRLO _for_loop_1\n"       // 2 cycle
 
     :
-    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits)
+    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (esc->dShotPins), "r" (~esc->dShotPins), "z" (dShotBits)
     : "r25", "r24", "r23"
     );
     break;
 
 
     
-    /*
-      DSHOT300 implementation
-      For 16MHz CPU,
-      0: 20 cycle ON, 34 cycle OFF   -> 1.25us ON, 2.1us  OFF     (target: 1.25us / 2.08us) 
-      1: 40 cycle ON, 14 cycle OFF   -> 2.5us  ON, 0.85ns OFF     (target: 2.5ns / 0.83ns) 
-      Total 54 cycle each bit        -> 3.33us                    (target: 3.35us )       
-    */ 
-    
+
     case DShot::Mode::DSHOT300:
     asm(
     // For i = 0 to 15:
@@ -179,12 +165,12 @@ static inline void sendData(){
     "OR r25,  %1\n"  // 1 cycle
     "OUT  %0, r25\n"  // 1 cycle
     //--- start frame 
-    // Wait 16 cyles - what need to be computed to change the signal
-    // 20 = 20 - 4
+    // Wait 21 cyles - what need to be computed to change the signal
+    // 16 = 20 - 4
 
 
-    NOP16  //1.27us
-    NOP
+    NOP16 
+    NOP //tune
 
 
     // Set HIGH for high bits only
@@ -207,11 +193,8 @@ static inline void sendData(){
 
     // Wait 7 cycles - what need to be computed to change the signal
     // 7 = 14 - 7
-    
-    NOP8
+    NOP8 //+1 NOP for tune
 
-
- 
     
     // Add to i (tmp_reg)
     "INC  r23\n"               // 1 cycle
@@ -219,14 +202,25 @@ static inline void sendData(){
     "BRLO _for_loop_2\n"       // 2 cycle
 
     :
-    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits)
+    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (esc->dShotPins), "r" (~esc->dShotPins), "z" (dShotBits)
     : "r25", "r24", "r23"
     );
     break;
   }
  
   if(c.delay_ms>0){
-    delay_counter = c.delay_ms;
+    esc->delay_counter = c.delay_ms;
+  }
+}
+
+
+static inline void sendData(){
+
+
+   for (byte i=0; i<connected_escs; i++){
+       
+      sendEscData(escs[i]);
+      
   }
 }
 
@@ -240,8 +234,8 @@ static void initISR(){
   //per_value = 0x320;                         // Value required for 200Hz 0xC34 (800) with prescalar at 64 at 20MHz
   //per_value = 0x270;                         // Value required for 500Hz 0x270 (624) with prescalar at 64 at 20MHz
   //per_value = 0x1F3;                         // Value required for 500Hz 0x1F3 (499) with prescalar at 64 at 16Mhz
-  //per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
-  per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
+  per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
+  //per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
   //per_value = 0x31;                        // Value required for 5kHz 0x31 (49) with prescalar at 64
   //per_value = 0xC;                        // Value required for 20kHz 0xC (12) with prescalar at 64
   //per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
@@ -256,8 +250,7 @@ static void initISR(){
   for (byte i=0; i<16; i++){
     dShotBits[i] = 0;
   }
-  dShotPins = 0;
-
+  
   sei(); // allow interrupts
 }
 
@@ -276,7 +269,7 @@ ISR(TCA0_CMP1_vect){
   Prepare data packet, attach 0 to telemetry bit, and calculate CRC
   throttle: 11-bit data
 */
-static inline uint16_t createPacket(uint16_t throttle, bool telemetry){
+static inline uint16_t createPacket(uint16_t throttle, bool telemetry, DShot::Mode dShotMode){
 
     throttle = (throttle << 1) | (telemetry ? 1 : 0);
 
@@ -305,18 +298,22 @@ static inline uint16_t createPacket(uint16_t throttle, bool telemetry){
 
 /****************** end of static functions *******************/
 
+
 DShot::DShot(const enum Mode mode){
-    dShotMode = mode;
+    this->dShotMode = mode;
+    this-> dShotPins = 0;
+    escs[connected_escs] = this;
+    connected_escs++;
 }
 
 void DShot::attach(uint8_t pin){
-  this->_packet = 0;
+  
   pinMode(pin, OUTPUT);
   digitalWrite(pin, HIGH); //to disable PWM
   if (!isTimerActive()){
     initISR();
   }
-  dShotPins |= digitalPinToBitMask(pin);
+  this->dShotPins |= digitalPinToBitMask(pin);
 }
 
 
@@ -332,39 +329,17 @@ void DShot::setThrottle(uint16_t throttle){
    if(throttle > 0 && throttle <48){  
        telemetry = true;  //Some dShot commands need telemetry set to 1
    }
-
-  struct command c = {createPacket(throttle, telemetry), delay_ms};
-
-  command_index=0;
-  commands[command_index]=c;
+  this->permanent_command = {createPacket(throttle, telemetry, this->dShotMode), delay_ms};
 }
 
-void DShot::singleBeep(){
 
-
-   bool telemetry = true;
-   uint16_t delay_ms = DSHOT_BEEP_DELAY_US;
-
-  struct command c = {createPacket(1, telemetry), delay_ms};
-
-  command_index=1;
-  commands[command_index]=c;
-}
 
 void DShot::sequenceBeep(beep beeps[], int beeps_count){
    noInterrupts(); // stop interrupts
    bool telemetry = true;
-   command_index=0;
    for (int i = 0; i < beeps_count ; i++) {
-       command_index++;
-       beep b =  beeps[i];
-       Serial.print(b.tonality);
-       Serial.print("--");
-       Serial.println( b.delay_ms);
-       commands[command_index]={createPacket(b.tonality, telemetry), b.delay_ms};
-       
+       this->commands.push({createPacket(beeps[i].tonality, telemetry, this->dShotMode), beeps[i].delay_ms});
    }
-   Serial.println("...");
   interrupts(); // allow interrupts
 }
 
@@ -462,165 +437,3 @@ void DShot::sequenceBeep(beep beeps[], int beeps_count){
 //
 // Change CMP1 to CMP0 or CMP2 as required. Change indicated
 // bit values too.
-
-/*
-#define CHANGE_PRESCALER    0
-volatile bool i = false;
-
-void setup() {
-    Serial.begin(115200);
-    unsigned int per_value;
-    cli();
-#   if CHANGE_PRESCALER == 0                        // Use default 64 prescale factor
-        per_value = 0xFFFF;                         // Use maximum possible PER/CMP value (65535)
-        TCA0.SINGLE.PER = per_value;                // Set period register
-        TCA0.SINGLE.CMP1 = per_value;               // Set compare channel match value
-        TCA0.SINGLE.INTCTRL |= bit(5);              // Enable channel 1 compare match interrupt.
-                                                    // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
-#   elif CHANGE_PRESCALER == 1                      // Change prescale factor
-        TCA0.SINGLE.CTRLA = B00001101;              // Prescaler set to 256. Use the following for
-                                                    // other prescalers:
-                                                    // B00000001    1
-                                                    // B00000011    2
-                                                    // B00000101    4
-                                                    // B00000111    8
-                                                    // B00001001    16
-                                                    // B00001011    64
-                                                    // B00001101    256
-                                                    // B00001111    1024
-        per_value = 0xF423;                         // Value required for 1 Hz (62499)
-        TCA0.SINGLE.PER = per_value;                // Set period register
-        TCA0.SINGLE.CMP1 = per_value;               // Set compare channel match value
-        TCA0.SINGLE.INTCTRL |= bit(5);              // Enable channel 1 compare match interrupt.
-                                                    // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
-#   endif
-    sei();
-}
-
-void loop() {
-    unsigned long t = millis();
-    int alive_count = 0;
-    while(true) {
-        if (i) {
-            i = false;
-            Serial.println("Interrupt!");
-        }
-        if (millis() - t >= 1000) {
-            Serial.print("Still alive ");
-            Serial.println(alive_count++);
-            t = millis();
-        }
-    }
-}
-
-ISR(TCA0_CMP1_vect) {
-    cli();
-    i = true;
-    TCA0.SINGLE.INTFLAGS |= bit(5);                 // Clears the interrupt flag. Rather confusingly,
-                                                    // this is done by setting a bit in the register
-                                                    // to 1.
-                                                    // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
-    sei();
-}*/
-
-
-
-/*
- * static inline void sendData(){
-
-  unsigned long times[16*2];
-
-  noInterrupts();
-  
-  times[0]=micros(); 
-  for (byte i=0; i<16; i++){
-     boolean bit= bits[i];
-  
-    //digitalWrite(5,HIGH); //too slow
-    //VPORTD.OUT |= dShotPins;  
-    //VPORTD.OUT = B10101000;
-    
-    VPORTB.OUT = B00000100;  //D5=B2 D9=B0 D10=B1
-
-
-    asm(
-    // For i = 0 to 15:
-    "LDI  r23,  0\n"
-    // Set High for every attached pins
-    // DSHOT_PORT |= dShotPins;
-    "IN r25,  %0\n"
-    "_for_loop_0:\n"
-    "OR r25,  %1\n"
-    // Wait 7 cycles (7 - 6 = 1)
-    "NOP\n"
-
-    "OUT  %0, r25\n"
-    // Wait 10 cycles (10 - 4 = 6)
-    NOP4
-    NOP2
-    // Set Low for low bits only
-    //DSHOT_PORT &= dShotBits[i];
-    "LD r24,  Z+\n"
-    "AND  r25,  r24\n"
-    "OUT  %0, r25\n"
-    // Wait 10 cycles (10 - 2 = 8)
-    NOP8
-    // Turn off everything
-    // DSHOT_PORT &= ~dShotPins;
-    "AND  r25,  %2\n"
-    "OUT  %0, r25\n"
-    // Add to i (tmp_reg)
-    "INC  r23\n"
-    "CPI  r23,  16\n"
-    "BRLO _for_loop_0\n"
-    // 7 cycles to next bit (4 to add to i and branch, 2 to turn on), no wait
-    :
-    : "I" (_SFR_IO_ADDR(DSHOT_PORT)), "r" (dShotPins), "r" (~dShotPins), "z" (dShotBits)
-    : "r25", "r24", "r23"
-    );
-    
-
-  
-    
-    if (bit){
-      //25 cycles
-      asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-    }
-    else{
-      //12 cycles
-      asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n"); 
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");  
-    }
-    //digitalWrite(5, LOW); //too slow
-    //VPORTD.OUT &= ~ dShotPins;
-    //VPORTD.OUT = B00000000;  
-    VPORTB.OUT = B00000000;  //D5=B2 D9=B0 D10=B1
-    
-    if (bit){
-      //8 cycles
-      asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-    }else{
-      //21 cycles
-      asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-      //asm volatile("nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n nop\n");
-    }
-  }
-   times[1]=micros();
-  //for (byte i=0; i<16*2; i++){
-   Serial.println(times[1]-times[0]);
-   
-  //}
-  Serial.println("---------------------");
-  interrupts();
-}/*
- */

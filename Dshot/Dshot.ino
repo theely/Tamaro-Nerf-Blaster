@@ -1,6 +1,7 @@
 #include "DShot.h"
 
-DShot esc1(DShot::Mode::DSHOT300);
+DShot esc1(DShot::Mode::DSHOT300INV);
+DShot esc2(DShot::Mode::DSHOT300INV);
 
 uint16_t throttle = 48;
 uint16_t target = 0;
@@ -8,9 +9,11 @@ uint16_t target = 0;
 void setup() {
   // put your setup code here, to run once:
  Serial.begin(115200); 
- esc1.attach(6);
  esc1.attach(3);
  esc1.setThrottle(throttle);
+ 
+ esc2.attach(6);
+ esc2.setThrottle(throttle);
 }
 
 int count=0;
@@ -58,6 +61,7 @@ void loop() {
       Serial.print("Command: ");
       Serial.println(throttle);
       esc1.setThrottle(throttle);
+      esc2.setThrottle(throttle);
     }
   }
   
