@@ -1,5 +1,5 @@
 #include "Arduino.h"
-
+#include <CircularBuffer.h>
 #ifndef DShot_h
 #define DShot_h
 
@@ -28,9 +28,11 @@ class DShot{
     void setThrottle(uint16_t throttle);
     void singleBeep();
     void sequenceBeep(beep beeps[], int beeps_count);
-  private:
-    uint16_t _packet = 0;
-    uint16_t _throttle = 0;
+    CircularBuffer<command, 10> commands;
+    command permanent_command;
+    uint8_t dShotPins = 0;
+    enum DShot::Mode dShotMode = DShot::Mode::DSHOT300INV;
+    int delay_counter = 0;
 };
 
 #endif
