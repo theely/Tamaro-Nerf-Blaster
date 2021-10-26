@@ -11,22 +11,24 @@ int relay = 2;
 String version = "0.1";
 
 
-#define CONFIGURATION_VERSION  5
+#define CONFIGURATION_VERSION  6
 
 struct Confing {
-  int  pusher_pull_time; //time required for the pusher to move
-  int  pusher_push_time; //time required for the pusher to move
+  int  pusher_pull_time;  //time required for the pusher to move
+  int  pusher_push_time;  //time required for the pusher to move
   int  esc_max_power;
-  int  min_rampup_time; //time required for the flywheel to get up to speed
-  int  config_version; //IMPORTANT: increment config version for every change of this struct
+  int  min_rampup_time;   //time required for the flywheel to get up to speed
+  int  spin_differential; //how much slower the bottom wheel should turn
+  int  config_version;   //IMPORTANT: increment config version for every change of this struct
 };
 
 
 Confing configuration = {
   110, //pusher_pull_time -- min: 65 (tested)
   90,  //pusher_push_time -- min: 55 (tested)
-  1650, //esc_max_power
+  1200, //esc_max_power
   140, //min_rampup_time
+  150, //spin_differential
   CONFIGURATION_VERSION
 };
 
@@ -38,11 +40,12 @@ struct ConfigParam {
   int*    value;
 };
 
-ConfigParam config_params[4] = {
+ConfigParam config_params[5] = {
   ConfigParam{"pusher_pull_time",110,500,20,&configuration.pusher_pull_time},
   ConfigParam{"pusher_push_time",90,500,20,&configuration.pusher_push_time},
-  ConfigParam{"esc_max_power",1650,1300,2000,&configuration.esc_max_power},
-  ConfigParam{"min_rampup_time",140,0,500,&configuration.min_rampup_time},
+  ConfigParam{"esc_max_power",1200,2047,200,&configuration.esc_max_power},
+  ConfigParam{"min_rampup_time",140,500,0,&configuration.min_rampup_time},
+  ConfigParam{"spin_differential",150,300,0,&configuration.spin_differential},
 };
 
 
@@ -130,6 +133,10 @@ void loop() {
           Serial.print("version:");
           Serial.println(version);
       }
+
+      if(strcmp(token, "dump") == 0){
+        dump();
+      }
       
       if (set_value && variable_name != NULL && variable_value == NULL) {
         variable_value = token;
@@ -165,8 +172,8 @@ void loop() {
 
   if (state != Idle && state != Click1 && state != Command && state != Hold) {
     digitalWrite(LED, HIGH);
-    ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
-    ESC2.setThrottle(configuration.esc_max_power-200);    // Send the signal to the ESC
+    ESC1.setThrottle(max(configuration.esc_max_power,48));    // Send the signal to the ESC
+    ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
   } else {
     digitalWrite(LED, LOW );
     ESC1.setThrottle(0);
@@ -323,7 +330,7 @@ enum states getState() {
 
 void setSerialParam(String param, int value){
 
-  for(int i=0;i<sizeof config_params;i++){
+  for(int i=0;i<sizeof config_params/sizeof(struct ConfigParam);i++){
     if(param == config_params[i].name){
 
       if(value < config_params[i].min_value){
@@ -352,6 +359,17 @@ void setSerialParam(String param, int value){
     }
   }
 }
+
+
+void dump(){
+
+  for(int i=0;i<sizeof config_params/sizeof(struct ConfigParam);i++){
+     Serial.print(config_params[i].name);
+     Serial.print("=");
+     Serial.println(*config_params[i].value);
+  }
+}
+
 
 
 
