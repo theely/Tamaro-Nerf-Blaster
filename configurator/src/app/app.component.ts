@@ -20,6 +20,7 @@ export class AppComponent implements OnInit{
                'pusher_push_time': 55,
                'esc_max_power': 1650,
                'min_rampup_time':140,
+               'spin_differential':150,
              };
 
 isSingleShot:any;
@@ -47,7 +48,26 @@ async getVersion(event: Event) {
 
 
     }
-    //console.log(message);
+}
+
+async getConfigDump() {
+
+    console.log("Requesting config dump");
+    await this.writer.write("dump \n");
+    while (true) {
+      const { value, done } = await this.reader.read();
+      var command = value.split('=');
+      for (var key in  this.configuration) {
+        if(key === command[0]){
+          this.configuration[key] = command[1];
+          console.log("Setting " + key +" to:" + command[1]);
+        }
+      }
+      if (done) {
+        this.reader.releaseLock();
+        break;
+      }
+    }
 }
 
 
@@ -79,33 +99,25 @@ if (webSerial && webSerial.serial) {
     const { usbProductId, usbVendorId } = port.getInfo();
     console.log(usbVendorId);
 
-    await port.open({ baudRate: 115200 });
+    await port.open({ baudRate: 115200,databits: 7,  stopbits: 1, parity: "none" ,flowControl: "none"});
+
+    const [appReadable, devReadable] = port.readable.tee();
 
     const textDecoder = new TextDecoderStream();
-    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+    const readableStreamClosed = appReadable.pipeTo(textDecoder.writable);
     this.reader = textDecoder.readable.pipeThrough(new TransformStream(new LineBreakTransformer())).getReader();
 
     const textEncoder = new TextEncoderStream();
     const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
     this.writer = textEncoder.writable.getWriter();
 
-     this.isConnnected=true;
+    this.isConnnected=true;
     webSerial.serial.addEventListener("disconnect", (event:any) => {
         this.isConnnected=false;
     });
 
     //await writer.write("hello");
 
-var message = "";
-while (true) {
-  const { value, done } = await this.reader.read();
-  if (done) {
-    this.reader.releaseLock();
-    break;
-  }
-  message+=value;
-}
-console.log(message);
 
 //const textEncoder = new TextEncoderStream();
 //const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);

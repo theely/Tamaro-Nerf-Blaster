@@ -10,10 +10,13 @@ export class LineBreakTransformer {
   transform(chunk:any, controller:any) {
     // Append new chunks to existing chunks.
     this.chunks += chunk;
+
     // For each line breaks in chunks, send the parsed lines out.
-    const lines = this.chunks.split("\r\n");
+    const lines = this.chunks.split("\n");
     this.chunks = lines.pop();
-    lines.forEach((line:any) => controller.enqueue(line));
+    lines.forEach((line:any) => {
+      controller.enqueue(line)
+    });
   }
 
   flush(controller:any) {
