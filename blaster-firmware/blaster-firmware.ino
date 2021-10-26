@@ -172,7 +172,7 @@ void loop() {
 
   if (state != Idle && state != Click1 && state != Command && state != Hold) {
     digitalWrite(LED, HIGH);
-    ESC1.setThrottle(max(configuration.esc_max_power,48));    // Send the signal to the ESC
+    ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
     ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
   } else {
     digitalWrite(LED, LOW );
