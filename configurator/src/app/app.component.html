@@ -73,6 +73,17 @@
             <mat-slider class="input" [max]="500" [min]="10" [step]="1"   [(ngModel)]="configuration.min_rampup_time"></mat-slider>
       </li>
     </ul>
+
+
+    <ul class="setting-container">
+      <li class="setting-row">
+        <label class="label">Spin Differential</label>
+        <label class="value">{{configuration.spin_differential}}</label>
+      </li>
+      <li class="setting-row">
+            <mat-slider class="input" [max]="500" [min]="0" [step]="10"   [(ngModel)]="configuration.spin_differential"></mat-slider>
+      </li>
+    </ul>
 </mat-card>
 
 <mat-card class="setting-card">
