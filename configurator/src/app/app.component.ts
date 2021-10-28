@@ -74,7 +74,7 @@ async getConfigDump() {
 async pushConfiguration(event: Event) {
 
   for (var key in  this.configuration) {
-    var command:string="set "+key+"="+this.configuration[key]+" \n";
+    var command:string="set "+key+"="+this.configuration[key]+"\n";
    console.log(command);
    await this.writer.write(command);
   }
