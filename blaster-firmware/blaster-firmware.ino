@@ -189,30 +189,31 @@ void loop() {
 
   if (state == Command ) {
     ESC1.setThrottle(0);
-    delay(800); 
+    delay(320); 
      
     if (fireRate == Single) {
       fireRate = Burst;
       //   short - 3
       beep beeps[4];
-      beeps[0]= {1, 260};
-      beeps[1]= {3, 260};
-      beeps[2]= {3, 260};
-      beeps[3]= {3, 260};
+      beeps[0]= {4, 300};
+      beeps[1]= {1, 280};
+      beeps[2]= {1, 280};
+      beeps[3]= {1, 280};
       ESC1.sequenceBeep(beeps,4);
     } else if (fireRate == Burst) {
       fireRate = Auto;         
-      // short - long
-      beep beeps[2];
-      beeps[0]= {1, 260};
-      beeps[1]= {5, 260};
-      ESC1.sequenceBeep(beeps,2);
+      beep beeps[4];
+      beeps[0]= {4, 280};
+      beeps[1]= {1, 240};
+      beeps[2]= {2, 240};
+      beeps[3]= {3, 240};
+      ESC1.sequenceBeep(beeps,4);
     } else {
       fireRate = Single;
        //   short - short
       beep beeps[2];
-      beeps[0]= {1, 260};
-      beeps[1]= {3, 260};
+      beeps[0]= {4, 300};
+      beeps[1]= {1, 260};
       ESC1.sequenceBeep(beeps,2);
       
     }
