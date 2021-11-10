@@ -92,8 +92,9 @@ if (webSerial && webSerial.serial) {
       { usbVendorId: 9025 }
     ];
     // Prompt user to select an Arduino Uno device.
-    const port = await webSerial.serial.requestPort({ filters });
-    //const port = await webSerial.serial.requestPort();
+    //const port = await webSerial.serial.requestPort({ filters });
+
+    const port = await webSerial.serial.requestPort();
 
 
     const { usbProductId, usbVendorId } = port.getInfo();
