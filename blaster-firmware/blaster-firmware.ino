@@ -1,6 +1,6 @@
 #include "DShot.h"
 #include <EEPROM.h>
-#define SERIAL_SPEED      115200
+#define SERIAL_SPEED 115200
 
 
 // Declare the pins for the Button and the LED<br>int buttonPin = 12;
@@ -41,8 +41,8 @@ struct ConfigParam {
 };
 
 ConfigParam config_params[5] = {
-  ConfigParam{"pusher_pull_time",110,500,20,&configuration.pusher_pull_time},
-  ConfigParam{"pusher_push_time",90,500,20,&configuration.pusher_push_time},
+  ConfigParam{"pusher_pull_time",110,500,10,&configuration.pusher_pull_time},
+  ConfigParam{"pusher_push_time",90,500,10,&configuration.pusher_push_time},
   ConfigParam{"esc_max_power",1200,2047,200,&configuration.esc_max_power},
   ConfigParam{"min_rampup_time",140,500,0,&configuration.min_rampup_time},
   ConfigParam{"spin_differential",150,300,0,&configuration.spin_differential},
@@ -375,13 +375,23 @@ void dump(){
 
 
 
-/*
-  float getLiPoVoltage(){
 
+float getLiPoVoltage(){
+
+   /*
    // read the input on analog pin 0:
   int sensorValue = analogRead(ADC_BATTERY);
   // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 4.3V):
   float voltage = sensorValue * (4.3 / 1023.0);
 
   return voltage;
-  }*/
+  */
+
+  int value = analogRead(A3);
+  float voltage = value * (5.0/1023) * ((30.0 + 10.0)/10.0);
+  
+  return voltage;
+
+
+  
+  }
