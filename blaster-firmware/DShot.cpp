@@ -227,43 +227,75 @@ static inline void sendData(){
 
 static boolean timerActive = false;
 
-static void initISR(){
-  unsigned int per_value;
-  cli(); // stop interrupts
 
-  //per_value = 0x320;                         // Value required for 200Hz 0xC34 (800) with prescalar at 64 at 20MHz
-  //per_value = 0x270;                         // Value required for 500Hz 0x270 (624) with prescalar at 64 at 20MHz
-  //per_value = 0x1F3;                         // Value required for 500Hz 0x1F3 (499) with prescalar at 64 at 16Mhz
-  per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
-  //per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
-  //per_value = 0x31;                        // Value required for 5kHz 0x31 (49) with prescalar at 64
-  //per_value = 0xC;                        // Value required for 20kHz 0xC (12) with prescalar at 64
-  //per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
+
+static void initISR(){
+
+  cli(); // stop interrupts
+    
+    #if defined(__AVR_ATmega328P__)
+
+    TCCR1A = 0; // set entire TCCR1A register to 0
+    TCCR1B = 0; // same for TCCR1B
+    TCNT1  = 0; // initialize counter value to 0
+    // set compare match register for 500 Hz increments
+    OCR1A = 249; // = 16000000 / 64 * 1000 - 1 (must be <65536)
+    
+    // turn on CTC mode
+    TCCR1B |= (1 << WGM12);
+    
+    // enable timer compare interrupt
+    TIMSK1 |= (1 << OCIE1A);
+ 
+    #endif
+    #if defined(ARDUINO_ARCH_MEGAAVR)
+
+      unsigned int per_value;
+    
+      //per_value = 0x320;                         // Value required for 200Hz 0xC34 (800) with prescalar at 64 at 20MHz
+      //per_value = 0x270;                         // Value required for 500Hz 0x270 (624) with prescalar at 64 at 20MHz
+      //per_value = 0x1F3;                         // Value required for 500Hz 0x1F3 (499) with prescalar at 64 at 16Mhz
+      per_value = 0xF9;                        // Value required for 1kHz 0xF9 (249) with prescalar at 64
+      //per_value = 0x137;                        // Value required for 1kHz 0xF9 (311) with prescalar at 64 at 20Mhz
+      //per_value = 0x31;                        // Value required for 5kHz 0x31 (49) with prescalar at 64
+      //per_value = 0xC;                        // Value required for 20kHz 0xC (12) with prescalar at 64
+      //per_value = 0x9B;                             // Value required for 2kHz 0x9B (155) with prescalar at 64  at 20MHz
+    
+      
+      TCA0.SINGLE.PER = per_value;                // Set period register
+      TCA0.SINGLE.CMP1 = per_value;               // Set compare channel match value
+      TCA0.SINGLE.INTCTRL |= bit(5);              // Enable channel 1 compare match interrupt.
+                                                // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
+    #endif
 
   
-  TCA0.SINGLE.PER = per_value;                // Set period register
-  TCA0.SINGLE.CMP1 = per_value;               // Set compare channel match value
-  TCA0.SINGLE.INTCTRL |= bit(5);              // Enable channel 1 compare match interrupt.
-                                              // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
-
   timerActive = true;
   for (byte i=0; i<16; i++){
     dShotBits[i] = 0;
-  }
-  
+  }  
   sei(); // allow interrupts
-}
+}  
+
 
 static boolean isTimerActive(){
   return timerActive;
 }
 
+/* nano
 ISR(TCA0_CMP1_vect){
    noInterrupts(); // stop interrupts
    sendData();
    TCA0.SINGLE.INTFLAGS |= bit(5);
    interrupts(); // allow interrupts
 }
+*/
+//mini
+ISR(TCA0_CMP1_vect){
+   noInterrupts(); // stop interrupts
+   sendData();
+   interrupts(); // allow interrupts
+}
+
 
 /*
   Prepare data packet, attach 0 to telemetry bit, and calculate CRC
