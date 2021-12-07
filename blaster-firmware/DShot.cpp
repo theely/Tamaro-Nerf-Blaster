@@ -239,14 +239,18 @@ static void initISR(){
     TCCR1B = 0; // same for TCCR1B
     TCNT1  = 0; // initialize counter value to 0
     // set compare match register for 500 Hz increments
-    OCR1A = 249; // = 16000000 / 64 * 1000 - 1 (must be <65536)
-    
+    //
     // turn on CTC mode
     TCCR1B |= (1 << WGM12);
-    
+
+    // Set CS12 and CS10 bits for 64 prescaler
+    TCCR1B |= (1 << CS12) | (1 << CS10);
+    OCR1A = 32;  //consider reducing to 32 for higher fre
+  
+   
     // enable timer compare interrupt
     TIMSK1 |= (1 << OCIE1A);
- 
+
     #endif
     #if defined(ARDUINO_ARCH_MEGAAVR)
 
@@ -288,9 +292,16 @@ ISR(TCA0_CMP1_vect){
    TCA0.SINGLE.INTFLAGS |= bit(5);
    interrupts(); // allow interrupts
 }
+
+
+
 */
-//mini
-ISR(TCA0_CMP1_vect){
+#if defined(__AVR_ATmega328P__)
+ ISR(TIMER1_COMPA_vect){
+#endif
+#if defined(ARDUINO_ARCH_MEGAAVR)
+ ISR(TCA0_CMP1_vect){
+#endif  
    noInterrupts(); // stop interrupts
    sendData();
    interrupts(); // allow interrupts
@@ -377,9 +388,8 @@ void DShot::sequenceBeep(beep beeps[], int beeps_count){
 
 
 
-//beacon
+//Arduino Clone Interupts doc: https://www.instructables.com/Arduino-Timer-Interrupts/
 
-//dshotCommandWrite(ALL_MOTORS, getMotorCount(), beeperConfig()->dshotBeaconTone, DSHOT_CMD_TYPE_INLINE);
 
 
 
