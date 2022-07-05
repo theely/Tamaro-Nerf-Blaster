@@ -1,6 +1,10 @@
 #include "DShot.h"
 #include <EEPROM.h>
+#include <ButtonDebounce.h>
+
 #define SERIAL_SPEED 115200
+
+#define ENGAGE_MOTORS //Comment to disable motors
 
 
 // Declare the pins for the Button and the LED<br>int buttonPin = 12;
@@ -54,12 +58,14 @@ ConfigParam config_params[5] = {
 long timer_rampup = 0;
 int  min_command_time = 25;       
 long timer_command = 0;
-int  command_timeout = 3000;       
+int  command_timeout = 1500;       
 long timer_command_timeout = 0;
+int  click_timeout = 1500;       
+long timer_click_timeout = 0;
 
 
-enum states {Idle, Rampup, Ready, Fire, Hold, Click1, Click2, Click2Ready, Command};
-const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Click1", "Click2", "Click2Ready", "Command"};
+enum states {Idle, Rampup, Ready, Fire, Hold, Click1, Rampup_Click1, Ready_Click1, Click2_Command};
+const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Click1", "Rampup_Click1", "Ready_Click1", "Click2_Command"};
 
 enum fireRates {Single, Auto, Burst};
 
@@ -77,15 +83,22 @@ String serial_command;
 DShot ESC1(DShot::Mode::DSHOT300INV);
 DShot ESC2(DShot::Mode::DSHOT300INV);
 
-
+ButtonDebounce revButton(revPin, 15);
+ButtonDebounce triggerButton(triggerPin, 15);
 
 void setup() {
 
   Serial.begin(SERIAL_SPEED);
 
  
-  pinMode(revPin, INPUT_PULLUP);
-  pinMode(triggerPin, INPUT_PULLUP);
+  //pinMode(revPin, INPUT_PULLUP);
+  //pinMode(triggerPin, INPUT_PULLUP);
+
+
+
+  //pinMode(revPin, INPUT);
+  //pinMode(triggerPin, INPUT);
+  
   pinMode(relay, OUTPUT);
 
   // Define pin #13 as output, for the LED
@@ -106,18 +119,19 @@ void setup() {
   }
 
   // Attach the ESC on pin 6 and 3
-  ESC1.attach(3);
-  ESC2.attach(6); 
-
+  #if defined(ENGAGE_MOTORS)
+    ESC1.attach(3);
+    ESC2.attach(6); 
+  #endif
 }
 
 void loop() {
-  /*
+  
     float vabt= getLiPoVoltage();
     if(vabt < 3.5){
     Serial.print("LiPo low:");
     Serial.println(vabt);
-    }*/
+    }
 
   if (Serial.available()) {
     serial_command = Serial.readStringUntil('\n');
@@ -166,11 +180,11 @@ void loop() {
   }
 
 
-  // Read the value of the input. It can either be 1 or 0
-  int revValue = !digitalRead(revPin);
-  int triggerValue = !digitalRead(triggerPin);
 
-  if (state != Idle && state != Click1 && state != Command && state != Hold) {
+
+  
+
+  if (state != Idle && state != Click1 && state != Click2_Command && state != Hold) {
     digitalWrite(LED, HIGH);
     ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
     ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
@@ -187,7 +201,7 @@ void loop() {
     delay(configuration.pusher_push_time);
   }
 
-  if (state == Command ) {
+  if (state == Click2_Command ) {
     ESC1.setThrottle(0);
     delay(320); 
      
@@ -223,8 +237,12 @@ void loop() {
 
 enum states getState() {
 
-  int revValue = !digitalRead(revPin);
-  int triggerValue = !digitalRead(triggerPin);
+
+    revButton.update();
+    triggerButton.update();
+
+    int revValue = !revButton.state();
+    int triggerValue = !triggerButton.state(); 
 
 
   //Detect Changes
@@ -242,25 +260,27 @@ enum states getState() {
     case Idle  :
       if (revValue == HIGH) {
         timer_rampup = millis();
+        timer_click_timeout = millis();
         return Rampup;
       }
       return Idle;
       break;
 
     case Rampup :
-      if (revValue == LOW && commandValid) {
+      if (revValue == LOW && (millis() - timer_click_timeout) < click_timeout) {
         timer_command_timeout = millis();
         return Click1;
       }
-      if ((millis() - timer_rampup) > configuration.min_rampup_time) {
+      if (revValue == HIGH && (millis() - timer_rampup) > configuration.min_rampup_time) {
         return Ready;
-      } else {
+      } 
+      if (revValue == HIGH) {
         return Rampup;
       }
       break;
 
     case Ready :
-      if (revValue == LOW && commandValid) {
+      if (revValue == LOW  && (millis() - timer_click_timeout) < click_timeout) {
         timer_command_timeout = millis();
         return Click1;
       }
@@ -268,7 +288,9 @@ enum states getState() {
         burstCount = 1;
         return Fire;
       }
-      return Ready;
+      if (revValue == HIGH && triggerValue == LOW) {
+        return Ready;
+      }
       break;
 
     case Fire:
@@ -293,33 +315,38 @@ enum states getState() {
     case Click1:
       if (revValue == HIGH ) {
         timer_rampup = millis();
+        timer_click_timeout = millis();
       }
       if (revValue == HIGH  && commandValid) {
-        return Click2;
+        return Rampup_Click1;
       }
       if ((millis() - timer_command_timeout) > command_timeout) {
         return Idle;
       }
       return Click1;
 
-    case Click2:
-      if (revValue == LOW  && commandValid) {
-        return Command;
+    case Rampup_Click1:
+      if (revValue == LOW  && (millis() - timer_click_timeout) < click_timeout) {
+        return Click2_Command;
       }
       if ((millis() - timer_rampup) > configuration.min_rampup_time) {
-        return Click2Ready;
+        return Ready_Click1;
       }
-      return Click2;
+      if (revValue == HIGH) {
+        return Rampup_Click1;
+      }
 
-    case Click2Ready:
+    case Ready_Click1:
       if (triggerValue == HIGH) {
         burstCount = 1;
         return Fire;
       }
-      if (revValue == LOW  && commandValid) {
-        return Command;
+      if (revValue == LOW  && (millis() - timer_click_timeout) < click_timeout) {
+        return Click2_Command;
       }
-      return Click2Ready;
+      if (revValue == HIGH && triggerValue == LOW) {
+        return Ready_Click1;
+      }
 
     default : break;
 
@@ -387,7 +414,7 @@ float getLiPoVoltage(){
   return voltage;
   */
 
-  int value = analogRead(A3);
+  int value = analogRead(A1); //A3 on previous version
   float voltage = value * (5.0/1023) * ((30.0 + 10.0)/10.0);
   
   return voltage;
