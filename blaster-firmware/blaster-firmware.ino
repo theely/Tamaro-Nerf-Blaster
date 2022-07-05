@@ -75,9 +75,6 @@ enum fireRates fireRate = Burst;
 
 int burstCount = 0;
 
-int revPrevious = LOW;
-int triggerPrevious = LOW;
-
 String serial_command;
 
 DShot ESC1(DShot::Mode::DSHOT300INV);
@@ -245,16 +242,6 @@ enum states getState() {
     int triggerValue = !triggerButton.state(); 
 
 
-  //Detect Changes
-  bool commandValid = false;
-  if (revPrevious != revValue || triggerPrevious != triggerValue) {
-    timer_command = millis();
-  } else if ((millis() - timer_command) > min_command_time) {
-    commandValid = true;
-  }
-  revPrevious = revValue;
-  triggerPrevious = triggerValue;
-
   switch (state) {
 
     case Idle  :
@@ -317,7 +304,7 @@ enum states getState() {
         timer_rampup = millis();
         timer_click_timeout = millis();
       }
-      if (revValue == HIGH  && commandValid) {
+      if (revValue == HIGH ) {
         return Rampup_Click1;
       }
       if ((millis() - timer_command_timeout) > command_timeout) {
