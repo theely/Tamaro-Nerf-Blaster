@@ -6,6 +6,8 @@
 
 #define ENGAGE_MOTORS //Comment to disable motors
 
+//TODO implment BlHeli passthrough: https://github.com/BrushlessPower/BlHeli-Passthrough
+
 
 // Declare the pins for the Button and the LED<br>int buttonPin = 12;
 int LED = 13;
@@ -91,7 +93,8 @@ void setup() {
   //pinMode(revPin, INPUT_PULLUP);
   //pinMode(triggerPin, INPUT_PULLUP);
 
-
+   pinMode(12, OUTPUT);
+   digitalWrite(12, LOW);
 
   //pinMode(revPin, INPUT);
   //pinMode(triggerPin, INPUT);
