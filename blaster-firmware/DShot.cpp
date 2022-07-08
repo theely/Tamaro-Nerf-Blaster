@@ -115,7 +115,9 @@ static inline void sendEscData(DShot * esc){
     // 16 = 20 - 4
 
     NOP16
-    NOP //tune
+    #if defined(__AVR_ATmega328P__)
+      NOP //tune
+    #endif
 
     // Set HIGH for high bits only
     //DSHOT_PORT |= dShotBits[i];
@@ -138,7 +140,12 @@ static inline void sendEscData(DShot * esc){
     // Wait 10 cycles - what need to be computed to change the signal
     // 10 = 14 - 7
     
-    NOP8 //+1 NOP for tune
+    NOP4
+    NOP2
+    NOP
+    #if defined(__AVR_ATmega328P__)
+      NOP //tune
+    #endif
     
     // Add to i (tmp_reg)
     "INC  r23\n"               // 1 cycle
@@ -170,7 +177,9 @@ static inline void sendEscData(DShot * esc){
 
 
     NOP16 
-    NOP //tune
+    #if defined(__AVR_ATmega328P__)
+      NOP //tune
+    #endif
 
 
     // Set HIGH for high bits only
@@ -193,7 +202,12 @@ static inline void sendEscData(DShot * esc){
 
     // Wait 7 cycles - what need to be computed to change the signal
     // 7 = 14 - 7
-    NOP8 //+1 NOP for tune
+    NOP4
+    NOP2
+    NOP
+    #if defined(__AVR_ATmega328P__)
+      NOP //tune
+    #endif
 
     
     // Add to i (tmp_reg)
