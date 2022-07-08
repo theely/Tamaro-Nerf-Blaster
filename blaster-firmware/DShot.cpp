@@ -234,7 +234,7 @@ static void initISR(){
   cli(); // stop interrupts
     
     #if defined(__AVR_ATmega328P__)
-
+    
     TCCR1A = 0; // set entire TCCR1A register to 0
     TCCR1B = 0; // same for TCCR1B
     TCNT1  = 0; // initialize counter value to 0
@@ -245,12 +245,12 @@ static void initISR(){
 
     // Set CS12 and CS10 bits for 64 prescaler
     TCCR1B |= (1 << CS12) | (1 << CS10);
-    OCR1A = 32;  //consider reducing to 32 for higher fre
+    OCR1A = 32;  //500hz
   
    
     // enable timer compare interrupt
     TIMSK1 |= (1 << OCIE1A);
-
+    
     #endif
     #if defined(ARDUINO_ARCH_MEGAAVR)
 
@@ -269,7 +269,35 @@ static void initISR(){
       TCA0.SINGLE.PER = per_value;                // Set period register
       TCA0.SINGLE.CMP1 = per_value;               // Set compare channel match value
       TCA0.SINGLE.INTCTRL |= bit(5);              // Enable channel 1 compare match interrupt.
-                                                // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
+                                                  // Use bit(4) for CMP0, bit(5) CMP1, bit(6) CMP2
+
+
+  //TCB1.CTRLA   = 0;
+  //TCB1.CTRLA  |= TCB_CLKSEL_CLKDIV2_gc;     // Divider 2 from CLK_PER ( = 1/16MHz )
+  //TCB1.CTRLA  |= TCB_ENABLE_bm;             // Enable Timer
+  //TCB1.CTRLB   = 0;                         // Periodic Interrupt mode, waveform output disabled
+  //TCB1.INTCTRL = 0x00000001;                // Enable interrupt on capture
+  //TCB1.CCMP    = 4000;                      // @16Mhz it is 500us ( = 4000 /(16MHz/2) )
+  //TCB1.CNT     = 0;                         // Make sure to start time at zero
+
+       //TCB2.CTRLA   = 0;
+       //TCB2.CTRLA  |= TCB_CLKSEL_CLKDIV2_gc;     // Divider 2 from CLK_PER ( = 1/16MHz )
+       //TCB2.CTRLA  |= TCB_ENABLE_bm;             // Enable Timer
+       //TCB2.CTRLB   = 0;                         // Periodic Interrupt mode, waveform output disabled
+       //TCB2.INTCTRL = 0x00000001;                // Enable interrupt on capture
+       //TCB2.CCMP    = 40000;                     // @16Mhz it is 5ms ( = 40000 /(16MHz/2) )
+       //TCB2.CNT     = 0;                         // Make sure to start time at zero
+
+
+       //TCB0.CTRLA   = 0;
+       ///TCB0.CTRLA  |= TCB_CLKSEL_CLKDIV2_gc;     // Divider 2 from CLK_PER ( = 1/16MHz )
+       //TCB0.CTRLA  |= TCB_ENABLE_bm;             // Enable Timer
+       //TCB0.CTRLB   = 0;                         // Periodic Interrupt mode, waveform output disabled
+       //TCB0.INTCTRL = 0x00000001;                // Enable interrupt on capture
+       //TCB0.CCMP    = 40000;                     // @16Mhz it is 5ms ( = 40000 /(16MHz/2) )
+       //TCB0.CNT     = 0;                         // Make sure to start time at zero
+                                             
+                                             
     #endif
 
   
@@ -300,7 +328,9 @@ ISR(TCA0_CMP1_vect){
  ISR(TIMER1_COMPA_vect){
 #endif
 #if defined(ARDUINO_ARCH_MEGAAVR)
- ISR(TCA0_CMP1_vect){
+  ISR(TCA0_CMP1_vect){
+ //ISR(TCB0_INT_vect){
+ 
 #endif  
    noInterrupts(); // stop interrupts
    sendData();
