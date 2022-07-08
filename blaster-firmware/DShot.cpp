@@ -313,29 +313,22 @@ static boolean isTimerActive(){
   return timerActive;
 }
 
-/* nano
-ISR(TCA0_CMP1_vect){
-   noInterrupts(); // stop interrupts
-   sendData();
-   TCA0.SINGLE.INTFLAGS |= bit(5);
-   interrupts(); // allow interrupts
-}
 
-
-
-*/
 #if defined(__AVR_ATmega328P__)
- ISR(TIMER1_COMPA_vect){
+  ISR(TIMER1_COMPA_vect){
+    noInterrupts(); // stop interrupts
+    sendData();
+    interrupts(); // allow interrupts
+  }
 #endif
 #if defined(ARDUINO_ARCH_MEGAAVR)
   ISR(TCA0_CMP1_vect){
- //ISR(TCB0_INT_vect){
- 
-#endif  
-   noInterrupts(); // stop interrupts
-   sendData();
-   interrupts(); // allow interrupts
-}
+     noInterrupts(); // stop interrupts
+     sendData();
+     TCA0.SINGLE.INTFLAGS |= bit(5);
+     interrupts(); // allow interrupts
+  }
+#endif
 
 
 /*
