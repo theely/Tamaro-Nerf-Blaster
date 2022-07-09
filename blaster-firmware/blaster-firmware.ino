@@ -4,7 +4,6 @@
 
 #define SERIAL_SPEED 115200
 
-#define ENGAGE_MOTORS //Comment to disable motors
 
 //TODO implment BlHeli passthrough: https://github.com/BrushlessPower/BlHeli-Passthrough
 
@@ -89,6 +88,12 @@ void setup() {
 
   Serial.begin(SERIAL_SPEED);
 
+  // Attach the ESC on pin 6 and 3
+  ESC1.attach(3);
+  ESC2.attach(6);
+  ESC1.setThrottle(0);
+  ESC2.setThrottle(0); 
+
  
   //pinMode(revPin, INPUT_PULLUP);
   //pinMode(triggerPin, INPUT_PULLUP);
@@ -118,11 +123,7 @@ void setup() {
     EEPROM.get( 0, configuration);
   }
 
-  // Attach the ESC on pin 6 and 3
-  #if defined(ENGAGE_MOTORS)
-    ESC1.attach(3);
-    ESC2.attach(6); 
-  #endif
+
 }
 
 void loop() {
