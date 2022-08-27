@@ -8,11 +8,26 @@
 //TODO implment BlHeli passthrough: https://github.com/BrushlessPower/BlHeli-Passthrough
 
 
-// Declare the pins for the Button and the LED<br>int buttonPin = 12;
-int LED = 13;
-int revPin = 8;
-int triggerPin = 7;
+
+
+
 int relay = 2;
+int esc1Pin = 3;
+//4 unused
+int powerSwitchPin = 5;
+int esc2Pin = 6;
+int triggerPin = 7;
+int revPin = 8;
+//9 unused
+//10 unused
+int modeSwitchPin = 11;
+int powerPin = 12;
+
+int LED = 13;
+
+//pin 15 used for analog input A1
+
+
 String version = "0.1";
 
 
@@ -57,16 +72,12 @@ ConfigParam config_params[5] = {
 
  
 long timer_rampup = 0;
-int  min_command_time = 25;       
-long timer_command = 0;
-int  command_timeout = 1500;       
-long timer_command_timeout = 0;
-int  click_timeout = 1500;       
-long timer_click_timeout = 0;
+long timer_power_off = 0;
+int power_timeout = 1000;
 
 
-enum states {Idle, Rampup, Ready, Fire, Hold, Click1, Rampup_Click1, Ready_Click1, Click2_Command};
-const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Click1", "Rampup_Click1", "Ready_Click1", "Click2_Command"};
+enum states {Idle, Rampup, Ready, Fire, Hold, Command, PoweringDown,PowerOFF};
+const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Command","PoweringDown","PowerOFF"};
 
 enum fireRates {Single, Auto, Burst};
 
@@ -83,23 +94,28 @@ DShot ESC2(DShot::Mode::DSHOT300INV);
 
 ButtonDebounce revButton(revPin, 15);
 ButtonDebounce triggerButton(triggerPin, 15);
+ButtonDebounce powerButton(powerSwitchPin, 30);
+ButtonDebounce modeButton(modeSwitchPin, 30);  
 
 void setup() {
 
   Serial.begin(SERIAL_SPEED);
 
   // Attach the ESC on pin 6 and 3
-  ESC1.attach(3);
-  ESC2.attach(6);
+  ESC1.attach(esc1Pin);
+  ESC2.attach(esc2Pin);
   ESC1.setThrottle(0);
   ESC2.setThrottle(0); 
 
- 
+
+   pinMode(powerPin, OUTPUT);
+   digitalWrite(powerPin, HIGH);
+
+
+
+  
   //pinMode(revPin, INPUT_PULLUP);
   //pinMode(triggerPin, INPUT_PULLUP);
-
-   pinMode(12, OUTPUT);
-   digitalWrite(12, LOW);
 
   //pinMode(revPin, INPUT);
   //pinMode(triggerPin, INPUT);
@@ -127,11 +143,13 @@ void setup() {
 }
 
 void loop() {
+
+
   
     float vabt= getLiPoVoltage();
     if(vabt < 3.5){
-    Serial.print("LiPo low:");
-    Serial.println(vabt);
+    //Serial.print("LiPo low:");
+    //Serial.println(vabt);
     }
 
   if (Serial.available()) {
@@ -175,17 +193,20 @@ void loop() {
   }
 
   state = getState();
+  
+  
   if (previous_state != state) {
     Serial.println(statesNames[state]);
     previous_state = state;
   }
 
+  if(state == PowerOFF){
+    digitalWrite(powerPin, LOW);
+  }
 
 
-
-  
-
-  if (state != Idle && state != Click1 && state != Click2_Command && state != Hold) {
+  if (state == Rampup || state == Ready || state == Fire ) { 
+  //if (state != Idle && state != Click1 && state != Click2_Command && state != Hold) {
     digitalWrite(LED, HIGH);
     ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
     ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
@@ -201,8 +222,7 @@ void loop() {
     digitalWrite(relay, LOW);
     delay(configuration.pusher_push_time);
   }
-
-  if (state == Click2_Command ) {
+  if (state == Command) {
     ESC1.setThrottle(0);
     delay(320); 
      
@@ -233,7 +253,6 @@ void loop() {
       
     }
   }
-
 }
 
 enum states getState() {
@@ -241,27 +260,50 @@ enum states getState() {
 
     revButton.update();
     triggerButton.update();
+    powerButton.update();
+    modeButton.update();
 
     int revValue = !revButton.state();
     int triggerValue = !triggerButton.state(); 
+    int powerValue = !powerButton.state();
+    int modeValue = !modeButton.state();
+
+  
 
 
   switch (state) {
 
-    case Idle  :
+    case PowerOFF:
+       return PowerOFF;
+       break;
+
+    case Idle:
+      if (modeValue == HIGH) {
+        return Command;
+      }    
+      if (powerValue == HIGH) {
+        timer_power_off= millis(); 
+        return PoweringDown;
+      }
+      
       if (revValue == HIGH) {
         timer_rampup = millis();
-        timer_click_timeout = millis();
         return Rampup;
       }
       return Idle;
       break;
 
+    case PoweringDown :
+       if (powerValue == LOW) {
+        return Idle;
+       }
+       if ((millis() - timer_power_off) > power_timeout) {
+         return PowerOFF;
+       }
+       return PoweringDown;
+       break; 
+       
     case Rampup :
-      if (revValue == LOW && (millis() - timer_click_timeout) < click_timeout) {
-        timer_command_timeout = millis();
-        return Click1;
-      }
       if (revValue == HIGH && (millis() - timer_rampup) > configuration.min_rampup_time) {
         return Ready;
       } 
@@ -271,10 +313,6 @@ enum states getState() {
       break;
 
     case Ready :
-      if (revValue == LOW  && (millis() - timer_click_timeout) < click_timeout) {
-        timer_command_timeout = millis();
-        return Click1;
-      }
       if (triggerValue == HIGH) {
         burstCount = 1;
         return Fire;
@@ -303,46 +341,15 @@ enum states getState() {
       }
       return Hold;
 
-    case Click1:
-      if (revValue == HIGH ) {
-        timer_rampup = millis();
-        timer_click_timeout = millis();
-      }
-      if (revValue == HIGH ) {
-        return Rampup_Click1;
-      }
-      if ((millis() - timer_command_timeout) > command_timeout) {
-        return Idle;
-      }
-      return Click1;
-
-    case Rampup_Click1:
-      if (revValue == LOW  && (millis() - timer_click_timeout) < click_timeout) {
-        return Click2_Command;
-      }
-      if ((millis() - timer_rampup) > configuration.min_rampup_time) {
-        return Ready_Click1;
-      }
-      if (revValue == HIGH) {
-        return Rampup_Click1;
-      }
-
-    case Ready_Click1:
-      if (triggerValue == HIGH) {
-        burstCount = 1;
-        return Fire;
-      }
-      if (revValue == LOW  && (millis() - timer_click_timeout) < click_timeout) {
-        return Click2_Command;
-      }
-      if (revValue == HIGH && triggerValue == LOW) {
-        return Ready_Click1;
-      }
+    case Command:
+      if (modeValue == HIGH) {
+        return Command;
+      } 
+      return Idle;
 
     default : break;
 
   }
-
 
   return Idle;
 }
