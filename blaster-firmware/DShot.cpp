@@ -11,7 +11,7 @@ static uint8_t dShotBits[16];
 static DShot * escs[8];
 static uint8_t connected_escs=0;
 
-#define DSHOT_BEEP_DELAY_US (260)
+
 
 #define NOP  "NOP\n"
 #define NOP2 NOP NOP
@@ -420,6 +420,12 @@ void DShot::sequenceBeep(beep beeps[], int beeps_count){
    for (int i = 0; i < beeps_count ; i++) {
        this->commands.push({createPacket(beeps[i].tonality, telemetry, this->dShotMode), beeps[i].delay_ms});
    }
+  interrupts(); // allow interrupts
+}
+
+void DShot::sequenceBeepClear(){
+   noInterrupts(); // stop interrupts
+   this->commands.clear();
   interrupts(); // allow interrupts
 }
 

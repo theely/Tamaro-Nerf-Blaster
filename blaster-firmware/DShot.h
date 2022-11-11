@@ -37,6 +37,7 @@ class DShot {
     void setThrottle(uint16_t throttle);
     void singleBeep();
     void sequenceBeep(beep beeps[], int beeps_count);
+    void sequenceBeepClear();
     CircularBuffer<command, 10> commands;
     command permanent_command;
     uint8_t dShotPins = 0;
