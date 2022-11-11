@@ -11,7 +11,7 @@
 
 
 
-int relay = 2;
+int solenoid = 2;
 int esc1Pin = 3;
 //4 unused
 int powerSwitchPin = 5;
@@ -70,20 +70,14 @@ ConfigParam config_params[5] = {
 
 
 
- 
-long timer_rampup = 0;
-long timer_power_off = 0;
-int power_timeout = 1000;
-
-
-enum states {Idle, Rampup, Ready, Fire, Hold, Command, PoweringDown,PowerOFF};
+enum states {Idle, Rampup, Ready, Fire, Hold,Command, PoweringDown,PowerOFF};
 const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Command","PoweringDown","PowerOFF"};
 
 enum fireRates {Single, Auto, Burst};
 
 enum states state = Idle;
 enum states previous_state = Idle;
-enum fireRates fireRate = Burst;
+enum fireRates fireRate = Single;
 
 int burstCount = 0;
 
@@ -95,7 +89,21 @@ DShot ESC2(DShot::Mode::DSHOT300INV);
 ButtonDebounce revButton(revPin, 15);
 ButtonDebounce triggerButton(triggerPin, 15);
 ButtonDebounce powerButton(powerSwitchPin, 30);
-ButtonDebounce modeButton(modeSwitchPin, 30);  
+ButtonDebounce modeButton(modeSwitchPin, 30);
+
+#if defined(__AVR_ATmega328P__)
+  int long_beep=130;
+  int short_beep=110;
+#endif
+#if defined(ARDUINO_ARCH_MEGAAVR)
+  int long_beep=260;
+  int short_beep=240;
+#endif
+
+long timer_rampup = 0;
+long timer_power_off = 0;
+int power_timeout = short_beep*4 + 300; //shoutdown after 4 beeps
+  
 
 void setup() {
 
@@ -105,7 +113,9 @@ void setup() {
   ESC1.attach(esc1Pin);
   ESC2.attach(esc2Pin);
   ESC1.setThrottle(0);
-  ESC2.setThrottle(0); 
+  ESC2.setThrottle(0);
+  setESC1speed(0);
+  setESC2speed(0); 
 
 
    pinMode(powerPin, OUTPUT);
@@ -120,12 +130,12 @@ void setup() {
   //pinMode(revPin, INPUT);
   //pinMode(triggerPin, INPUT);
   
-  pinMode(relay, OUTPUT);
+  pinMode(solenoid, OUTPUT);
 
   // Define pin #13 as output, for the LED
   pinMode(LED, OUTPUT); 
 
-  digitalWrite(relay, LOW);
+  digitalWrite(solenoid, LOW);
 
 
   Confing configuration_check;
@@ -139,7 +149,6 @@ void setup() {
     EEPROM.get( 0, configuration);
   }
 
-
 }
 
 void loop() {
@@ -151,6 +160,9 @@ void loop() {
     //Serial.print("LiPo low:");
     //Serial.println(vabt);
     }
+
+
+    controlESCs();
 
   if (Serial.available()) {
     serial_command = Serial.readStringUntil('\n');
@@ -195,11 +207,19 @@ void loop() {
   state = getState();
   
   
-  if (previous_state != state) {
-    Serial.println(statesNames[state]);
-    previous_state = state;
+  if(state == PoweringDown && previous_state != PoweringDown){
+      beep beeps[4];
+      beeps[0]= {4, short_beep};
+      beeps[1]= {3, short_beep};
+      beeps[2]= {2, short_beep};
+      beeps[3]= {1, short_beep};
+      ESC1.sequenceBeep(beeps,4);
   }
-
+  if(state == Idle && previous_state==PoweringDown){
+      ESC1.sequenceBeepClear();
+      ESC2.setThrottle(0);
+  }
+  
   if(state == PowerOFF){
     digitalWrite(powerPin, LOW);
   }
@@ -208,51 +228,68 @@ void loop() {
   if (state == Rampup || state == Ready || state == Fire ) { 
   //if (state != Idle && state != Click1 && state != Click2_Command && state != Hold) {
     digitalWrite(LED, HIGH);
-    ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
-    ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
+    
+    //ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
+    //ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
+
+    setESC1speed(configuration.esc_max_power);
+    setESC2speed(max(configuration.esc_max_power-configuration.spin_differential,48));
+    
   } else {
     digitalWrite(LED, LOW );
-    ESC1.setThrottle(0);
-    ESC2.setThrottle(0);
+    //ESC1.setThrottle(0);
+    //ESC2.setThrottle(0);
+    setESC1speed(0);
+    setESC2speed(0);
   }
-
+  
   if (state == Fire ) {
-    digitalWrite(relay, HIGH);
+    digitalWrite(solenoid, HIGH);
     delay(configuration.pusher_pull_time);
-    digitalWrite(relay, LOW);
+    digitalWrite(solenoid, LOW);
     delay(configuration.pusher_push_time);
   }
   if (state == Command) {
-    ESC1.setThrottle(0);
-    delay(320); 
+    //ESC1.setThrottle(0);
+    setESC1speed(0);
+    delay(320);
+
+
      
     if (fireRate == Single) {
       fireRate = Burst;
       //   short - 3
       beep beeps[4];
-      beeps[0]= {4, 300};
-      beeps[1]= {1, 280};
-      beeps[2]= {1, 280};
-      beeps[3]= {1, 280};
+      beeps[0]= {4, long_beep};
+      beeps[1]= {1, short_beep};
+      beeps[2]= {1, short_beep};
+      beeps[3]= {1, short_beep};
       ESC1.sequenceBeep(beeps,4);
     } else if (fireRate == Burst) {
       fireRate = Auto;         
       beep beeps[4];
-      beeps[0]= {4, 280};
-      beeps[1]= {1, 240};
-      beeps[2]= {2, 240};
-      beeps[3]= {3, 240};
+      beeps[0]= {4, long_beep};
+      beeps[1]= {1, short_beep};
+      beeps[2]= {2, short_beep};
+      beeps[3]= {3, short_beep};
       ESC1.sequenceBeep(beeps,4);
     } else {
       fireRate = Single;
        //   short - short
       beep beeps[2];
-      beeps[0]= {4, 300};
-      beeps[1]= {1, 260};
+      beeps[0]= {4, long_beep};
+      beeps[1]= {1, short_beep};
       ESC1.sequenceBeep(beeps,2);
       
     }
   }
+
+  //keep this statement at end of the loop
+  if (previous_state != state) {
+    Serial.println(statesNames[state]);
+    previous_state = state;
+  } 
+  
 }
 
 enum states getState() {
@@ -285,7 +322,6 @@ enum states getState() {
         timer_power_off= millis(); 
         return PoweringDown;
       }
-      
       if (revValue == HIGH) {
         timer_rampup = millis();
         return Rampup;
@@ -341,6 +377,8 @@ enum states getState() {
       }
       return Hold;
 
+    
+
     case Command:
       if (modeValue == HIGH) {
         return Command;
@@ -348,11 +386,66 @@ enum states getState() {
       return Idle;
 
     default : break;
-
   }
 
   return Idle;
 }
+
+
+int esc1ActualSpeed = 0;
+int esc2ActualSpeed = 0;
+int esc1TargetSpeed = 0;
+int esc2TargetSpeed = 0;
+
+ 
+long timer_break_esc1 = 0;
+long timer_break_esc2 = 0;
+
+void setESC1speed(int speed){
+   esc1TargetSpeed = speed;
+}
+
+void setESC2speed(int speed){
+    esc2TargetSpeed = speed;
+}
+
+void controlESCs(){
+
+  
+  if(esc1ActualSpeed<esc1TargetSpeed){
+    //esc1ActualSpeed+=1000;
+    //if(esc1ActualSpeed > esc1TargetSpeed){
+      esc1ActualSpeed = esc1TargetSpeed;
+    //}
+    ESC1.setThrottle(esc1ActualSpeed);
+  }else if(esc1ActualSpeed>esc1TargetSpeed && (millis() - timer_break_esc1 > 25)){
+      timer_break_esc1 = millis();
+      esc1ActualSpeed-=100;
+      if(esc1ActualSpeed < esc1TargetSpeed){
+        esc1ActualSpeed = esc1TargetSpeed;
+      }
+      ESC1.setThrottle(esc1ActualSpeed);
+  }
+
+  if(esc2ActualSpeed<esc2TargetSpeed){
+    //esc2ActualSpeed+=1000;
+    //if(esc2ActualSpeed > esc2TargetSpeed){
+      esc2ActualSpeed = esc2TargetSpeed;
+    //}
+    ESC2.setThrottle(esc2ActualSpeed);
+  }else if(esc2ActualSpeed>esc2TargetSpeed && (millis() - timer_break_esc2 > 25)){
+    timer_break_esc2 = millis();
+    esc2ActualSpeed-=100;
+    if(esc2ActualSpeed < esc2TargetSpeed){
+      esc2ActualSpeed = esc2TargetSpeed;
+    }
+    ESC2.setThrottle(esc2ActualSpeed);
+  }
+
+  
+
+}
+
 
 void setSerialParam(String param, int value){
 
