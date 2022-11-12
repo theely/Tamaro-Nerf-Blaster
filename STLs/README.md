@@ -7,6 +7,7 @@ Each STL part has already been placed with the best possible orientation to redu
 - Support: Yes (slicer default works fine)
 - Bridging: Yes (reduces need for support)
 - Infil: 15%-20%
+- Top solid layers: 4+
 
 
 ## Trigger
