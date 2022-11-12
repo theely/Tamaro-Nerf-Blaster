@@ -1,7 +1,7 @@
 # Printing Instructions
 
 **Important: Don't change the parts orientation.**    
-Each STL parts have already been placed to with the best possible orientation to reduce support need and to improve print quality.
+Each STL part has already been placed with the best possible orientation to reduce need for support and to improve print quality.
 
 ## Handles
 - Support: Yes (slicer default works fine)
