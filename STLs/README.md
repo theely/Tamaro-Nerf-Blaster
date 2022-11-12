@@ -62,7 +62,7 @@ Each STL part has already been placed with the best possible orientation to redu
 - Bridging: No
 - Infil: 15%
 
-## Battery Holder (otional)
+## Battery Holder (optional)
 This piece is optional and only needed if you would like to power the bluster with 16650 Li-Ion batteries insted of a LiPo battery.
 - Support: Yes
 - Bridging: Yes
