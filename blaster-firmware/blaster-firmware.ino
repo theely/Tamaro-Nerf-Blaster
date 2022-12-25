@@ -31,24 +31,26 @@ int LED = 13;
 String version = "0.1";
 
 
-#define CONFIGURATION_VERSION  6
+#define CONFIGURATION_VERSION  7
 
 struct Confing {
-  int  pusher_pull_time;  //time required for the pusher to move
-  int  pusher_push_time;  //time required for the pusher to move
+  int  pusher_pull_time;     //time required for the pusher to move
+  int  pusher_push_time;     //time required for the pusher to move
   int  esc_max_power;
-  int  min_rampup_time;   //time required for the flywheel to get up to speed
-  int  spin_differential; //how much slower the bottom wheel should turn
-  int  config_version;   //IMPORTANT: increment config version for every change of this struct
+  int  min_rampup_time;     //time required for the flywheel to get up to speed
+  int  spin_differential;   //how much slower the bottom wheel should turn
+  int  inactivity_time_out; //After how much self shutdown
+  int  config_version;     //IMPORTANT: increment config version for every change of this struct
 };
 
 
 Confing configuration = {
-  110, //pusher_pull_time -- min: 65 (tested)
-  90,  //pusher_push_time -- min: 55 (tested)
-  1200, //esc_max_power
-  140, //min_rampup_time
-  150, //spin_differential
+  110,         //pusher_pull_time -- min: 65 (tested)
+  90,          //pusher_push_time -- min: 55 (tested)
+  1200,        //esc_max_power
+  140,         //min_rampup_time
+  150,         //spin_differential
+  30,          //inactivity_time_out
   CONFIGURATION_VERSION
 };
 
@@ -60,12 +62,13 @@ struct ConfigParam {
   int*    value;
 };
 
-ConfigParam config_params[5] = {
+ConfigParam config_params[6] = {
   ConfigParam{"pusher_pull_time",110,500,10,&configuration.pusher_pull_time},
   ConfigParam{"pusher_push_time",90,500,10,&configuration.pusher_push_time},
   ConfigParam{"esc_max_power",1200,2047,200,&configuration.esc_max_power},
   ConfigParam{"min_rampup_time",140,500,0,&configuration.min_rampup_time},
   ConfigParam{"spin_differential",150,300,0,&configuration.spin_differential},
+  ConfigParam{"inactivity_time_out",30,60,0,&configuration.inactivity_time_out},
 };
 
 
@@ -103,7 +106,9 @@ ButtonDebounce modeButton(modeSwitchPin, 30);
 long timer_rampup = 0;
 long timer_power_off = 0;
 int power_timeout = short_beep*4 + 300; //shoutdown after 4 beeps
-  
+
+int inactivity_timer = 0;
+int inactivity_timeout = 0;  
 
 void setup() {
 
@@ -149,6 +154,9 @@ void setup() {
     EEPROM.get( 0, configuration);
   }
 
+  inactivity_timeout = configuration.inactivity_time_out * 1000* 60;
+  //inactivity_timeout = 1000* 15;
+  inactivity_timer = millis();
 }
 
 void loop() {
@@ -156,10 +164,19 @@ void loop() {
 
   
     float vabt= getLiPoVoltage();
-    if(vabt < 3.5){
-    //Serial.print("LiPo low:");
+    //if(vabt < 3.5){
+    
+    //}
+
+   
+    //DEBUG
+    //Serial.print("LiPo live:");
+    //Serial.print(vabt);
+    
+    //EEPROM.get(500, vabt);
+
+    //Serial.print(" eeprom:"); 
     //Serial.println(vabt);
-    }
 
 
     controlESCs();
@@ -244,6 +261,11 @@ void loop() {
   }
   
   if (state == Fire ) {
+
+    //DEGUB
+    //float vabt= getLiPoVoltage();
+    //EEPROM.put(500, vabt);
+    
     digitalWrite(solenoid, HIGH);
     delay(configuration.pusher_pull_time);
     digitalWrite(solenoid, LOW);
@@ -288,6 +310,9 @@ void loop() {
   if (previous_state != state) {
     Serial.println(statesNames[state]);
     previous_state = state;
+    if(state!=PoweringDown){
+      inactivity_timer = millis(); 
+    }
   } 
   
 }
@@ -326,11 +351,19 @@ enum states getState() {
         timer_rampup = millis();
         return Rampup;
       }
+      if (inactivity_timeout > 0 && ((millis() - inactivity_timer) > inactivity_timeout)) {
+        timer_power_off= millis(); 
+        return PoweringDown;
+      }
       return Idle;
       break;
 
     case PoweringDown :
-       if (powerValue == LOW) {
+       if (powerValue == LOW && ((millis() - inactivity_timer) < inactivity_timeout)) {
+        return Idle;
+       }
+       //pressing any button will exit from timout outo power down
+       if ((revValue == HIGH || revValue == HIGH || powerValue == HIGH || modeValue == HIGH) && ((millis() - inactivity_timer) > inactivity_timeout)) {
         return Idle;
        }
        if ((millis() - timer_power_off) > power_timeout) {
@@ -411,6 +444,8 @@ void setESC2speed(int speed){
 
 void controlESCs(){
 
+
+  //Gradual speed decrease is required to avoid voltage spikes that would accidentally trigger the solenoid
   
   if(esc1ActualSpeed<esc1TargetSpeed){
     //esc1ActualSpeed+=1000;
@@ -496,6 +531,9 @@ void dump(){
 
 float getLiPoVoltage(){
 
+//https://www.arduino.cc/reference/en/language/functions/analog-io/analogread/
+//https://skillbank.co.uk/arduino/measure.htm
+
    /*
    // read the input on analog pin 0:
   int sensorValue = analogRead(ADC_BATTERY);
@@ -505,8 +543,18 @@ float getLiPoVoltage(){
   return voltage;
   */
 
-  int value = analogRead(A1); //A3 on previous version
-  float voltage = value * (5.0/1023) * ((30.0 + 10.0)/10.0);
+  //int value = analogRead(A1); //A3 on previous version
+  //float voltage = value * (5.0/1023) * ((30.0 + 10.0)/10.0);
+  analogReference(INTERNAL);
+
+  float value = analogRead(A1); //A3 on previous version
+  float voltage = (value + 0.5) * 5.0 / 1023.0 *   16;
+
+
+   //Serial.print("LiPo digital:");
+   //Serial.print(value);
+   //Serial.print(" voltage:"); 
+   //Serial.println(voltage);
   
   return voltage;
 
