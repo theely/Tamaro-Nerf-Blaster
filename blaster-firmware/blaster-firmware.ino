@@ -9,8 +9,6 @@
 
 
 
-
-
 int solenoid = 2;
 int esc1Pin = 3;
 //4 unused
@@ -31,16 +29,19 @@ int LED = 13;
 String version = "0.1";
 
 
-#define CONFIGURATION_VERSION  7
+#define CONFIGURATION_VERSION  10
 
 struct Confing {
   int  pusher_pull_time;     //time required for the pusher to move
   int  pusher_push_time;     //time required for the pusher to move
   int  esc_max_power;
-  int  min_rampup_time;     //time required for the flywheel to get up to speed
-  int  spin_differential;   //how much slower the bottom wheel should turn
-  int  inactivity_time_out; //After how much self shutdown
-  int  config_version;     //IMPORTANT: increment config version for every change of this struct
+  int  min_rampup_time;      //time required for the flywheel to get up to speed
+  int  spin_differential;    //how much slower the bottom wheel should turn
+  int  inactivity_time_out;  //After how much self shutdown
+  int  warning_vbat;         //Vbat voltage to trigger warning
+  int  critical_vbat;        //Vbat voltage to trigger shutdown
+  int  vbat_scale;           //Used to calibrate vbat measurment
+  int  config_version;      //IMPORTANT: increment config version for every change of this struct
 };
 
 
@@ -51,6 +52,9 @@ Confing configuration = {
   140,         //min_rampup_time
   150,         //spin_differential
   30,          //inactivity_time_out
+  10,          //warning_vbat
+  9,           //critical_vbat
+  12,          //vbat_scale
   CONFIGURATION_VERSION
 };
 
@@ -62,13 +66,16 @@ struct ConfigParam {
   int*    value;
 };
 
-ConfigParam config_params[6] = {
+ConfigParam config_params[9] = {
   ConfigParam{"pusher_pull_time",110,500,10,&configuration.pusher_pull_time},
   ConfigParam{"pusher_push_time",90,500,10,&configuration.pusher_push_time},
   ConfigParam{"esc_max_power",1200,2047,200,&configuration.esc_max_power},
   ConfigParam{"min_rampup_time",140,500,0,&configuration.min_rampup_time},
   ConfigParam{"spin_differential",150,300,0,&configuration.spin_differential},
   ConfigParam{"inactivity_time_out",30,60,0,&configuration.inactivity_time_out},
+  ConfigParam{"warning_vbat",10,14,5,&configuration.warning_vbat},
+  ConfigParam{"critical_vbat",9,14,5,&configuration.critical_vbat},
+  ConfigParam{"vbat_scale",12,100,1,&configuration.vbat_scale},
 };
 
 
@@ -103,18 +110,20 @@ ButtonDebounce modeButton(modeSwitchPin, 30);
   int short_beep=240;
 #endif
 
-long timer_rampup = 0;
-long timer_power_off = 0;
-int power_timeout = short_beep*4 + 300; //shoutdown after 4 beeps
+unsigned long timer_rampup = 0;
+unsigned long timer_power_off = 0;
+unsigned long power_timeout = short_beep*4 + 300; //shoutdown after 4 beeps
 
-int inactivity_timer = 0;
-int inactivity_timeout = 0;  
+unsigned long inactivity_timer = 0;
+unsigned long inactivity_timeout = 0; 
+
+unsigned long vabt_warning_timer = 0; 
 
 void setup() {
 
   Serial.begin(SERIAL_SPEED);
 
-  // Attach the ESC on pin 6 and 3
+
   ESC1.attach(esc1Pin);
   ESC2.attach(esc2Pin);
   ESC1.setThrottle(0);
@@ -122,26 +131,16 @@ void setup() {
   setESC1speed(0);
   setESC2speed(0); 
 
+  analogReference(DEFAULT);
 
-   pinMode(powerPin, OUTPUT);
-   digitalWrite(powerPin, HIGH);
-
-
-
-  
-  //pinMode(revPin, INPUT_PULLUP);
-  //pinMode(triggerPin, INPUT_PULLUP);
-
-  //pinMode(revPin, INPUT);
-  //pinMode(triggerPin, INPUT);
+  pinMode(powerPin, OUTPUT);
+  digitalWrite(powerPin, HIGH);
   
   pinMode(solenoid, OUTPUT);
-
-  // Define pin #13 as output, for the LED
-  pinMode(LED, OUTPUT); 
-
   digitalWrite(solenoid, LOW);
-
+  
+  pinMode(LED, OUTPUT); 
+  digitalWrite(LED, LOW);
 
   Confing configuration_check;
   EEPROM.get( 0, configuration_check );
@@ -154,32 +153,14 @@ void setup() {
     EEPROM.get( 0, configuration);
   }
 
-  inactivity_timeout = configuration.inactivity_time_out * 1000* 60;
-  //inactivity_timeout = 1000* 15;
+  inactivity_timeout = ((unsigned long) configuration.inactivity_time_out) * 1000 * 60;
   inactivity_timer = millis();
 }
 
 void loop() {
 
 
-  
-    float vabt= getLiPoVoltage();
-    //if(vabt < 3.5){
-    
-    //}
-
-   
-    //DEBUG
-    //Serial.print("LiPo live:");
-    //Serial.print(vabt);
-    
-    //EEPROM.get(500, vabt);
-
-    //Serial.print(" eeprom:"); 
-    //Serial.println(vabt);
-
-
-    controlESCs();
+  controlESCs();
 
   if (Serial.available()) {
     serial_command = Serial.readStringUntil('\n');
@@ -194,6 +175,11 @@ void loop() {
           Serial.println("Tamaro Blaster");
           Serial.print("version:");
           Serial.println(version);
+      }
+
+      if(strcmp(token, "vbat") == 0){
+          Serial.print("vbat=");
+          Serial.println(getLiPoVoltage());
       }
 
       if(strcmp(token, "dump") == 0){
@@ -222,6 +208,20 @@ void loop() {
   }
 
   state = getState();
+
+
+  if(getLiPoVoltage() < configuration.warning_vbat){
+      if(vabt_warning_timer =0 || (millis() - vabt_warning_timer)  > 3000){
+        beep beeps[2];
+        beeps[0]= {1, short_beep};
+        beeps[1]= {1, short_beep};
+        ESC1.sequenceBeep(beeps,2);
+        vabt_warning_timer = millis();
+      }
+  }
+  if(getLiPoVoltage() < configuration.critical_vbat){
+    state = PowerOFF;
+  }
   
   
   if(state == PoweringDown && previous_state != PoweringDown){
@@ -243,28 +243,20 @@ void loop() {
 
 
   if (state == Rampup || state == Ready || state == Fire ) { 
-  //if (state != Idle && state != Click1 && state != Click2_Command && state != Hold) {
+
     digitalWrite(LED, HIGH);
-    
-    //ESC1.setThrottle(configuration.esc_max_power);    // Send the signal to the ESC
-    //ESC2.setThrottle(max(configuration.esc_max_power-configuration.spin_differential,48));    // Send the signal to the ESC
 
     setESC1speed(configuration.esc_max_power);
     setESC2speed(max(configuration.esc_max_power-configuration.spin_differential,48));
     
   } else {
     digitalWrite(LED, LOW );
-    //ESC1.setThrottle(0);
-    //ESC2.setThrottle(0);
+
     setESC1speed(0);
     setESC2speed(0);
   }
   
   if (state == Fire ) {
-
-    //DEGUB
-    //float vabt= getLiPoVoltage();
-    //EEPROM.put(500, vabt);
     
     digitalWrite(solenoid, HIGH);
     delay(configuration.pusher_pull_time);
@@ -272,10 +264,10 @@ void loop() {
     delay(configuration.pusher_push_time);
   }
   if (state == Command) {
-    //ESC1.setThrottle(0);
+
+    
     setESC1speed(0);
     delay(320);
-
 
      
     if (fireRate == Single) {
@@ -448,10 +440,7 @@ void controlESCs(){
   //Gradual speed decrease is required to avoid voltage spikes that would accidentally trigger the solenoid
   
   if(esc1ActualSpeed<esc1TargetSpeed){
-    //esc1ActualSpeed+=1000;
-    //if(esc1ActualSpeed > esc1TargetSpeed){
-      esc1ActualSpeed = esc1TargetSpeed;
-    //}
+    esc1ActualSpeed = esc1TargetSpeed;
     ESC1.setThrottle(esc1ActualSpeed);
   }else if(esc1ActualSpeed>esc1TargetSpeed && (millis() - timer_break_esc1 > 25)){
       timer_break_esc1 = millis();
@@ -463,10 +452,7 @@ void controlESCs(){
   }
 
   if(esc2ActualSpeed<esc2TargetSpeed){
-    //esc2ActualSpeed+=1000;
-    //if(esc2ActualSpeed > esc2TargetSpeed){
-      esc2ActualSpeed = esc2TargetSpeed;
-    //}
+    esc2ActualSpeed = esc2TargetSpeed;
     ESC2.setThrottle(esc2ActualSpeed);
   }else if(esc2ActualSpeed>esc2TargetSpeed && (millis() - timer_break_esc2 > 25)){
     timer_break_esc2 = millis();
@@ -527,37 +513,25 @@ void dump(){
 
 
 
-
+float vbat_avg = 0;
 
 float getLiPoVoltage(){
 
-//https://www.arduino.cc/reference/en/language/functions/analog-io/analogread/
-//https://skillbank.co.uk/arduino/measure.htm
-
-   /*
-   // read the input on analog pin 0:
-  int sensorValue = analogRead(ADC_BATTERY);
-  // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 4.3V):
-  float voltage = sensorValue * (4.3 / 1023.0);
-
-  return voltage;
-  */
-
-  //int value = analogRead(A1); //A3 on previous version
-  //float voltage = value * (5.0/1023) * ((30.0 + 10.0)/10.0);
-  analogReference(INTERNAL);
-
-  float value = analogRead(A1); //A3 on previous version
-  float voltage = (value + 0.5) * 5.0 / 1023.0 *   16;
+  //https://www.arduino.cc/reference/en/language/functions/analog-io/analogread/
+  //https://skillbank.co.uk/arduino/measure.htm
 
 
-   //Serial.print("LiPo digital:");
-   //Serial.print(value);
-   //Serial.print(" voltage:"); 
-   //Serial.println(voltage);
-  
-  return voltage;
+  float value = analogRead(A1); 
+  float voltage = (value + 0.5) * 5.0 / 1023.0 *   ((float) configuration.vbat_scale); //adj_multiplier
+  //Calibration formula: current_adj_multiplier * (actual_vbat / measured_vbat) = new_adj_multiplier
 
+  //To deal with battery sag voltage is measured as exponential moving average.
+  if(vbat_avg == 0){
+    vbat_avg = voltage;
+  }else{
+    static float alpha = 0.2; //must be between 0 and 1, the higher the faster it converges 
+    vbat_avg = (alpha * voltage) + (1.0 - alpha) * vbat_avg;
+  }
 
-  
+  return vbat_avg;
   }
