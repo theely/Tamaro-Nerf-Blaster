@@ -21,6 +21,10 @@ export class AppComponent implements OnInit{
                'esc_max_power': 1650,
                'min_rampup_time':140,
                'spin_differential':150,
+               'inactivity_time_out':30,
+               'warning_vbat':10,
+               'critical_vbat':9,
+               'vbat_scale':12,
              };
 
 isSingleShot:any;
@@ -56,13 +60,15 @@ async getConfigDump() {
     await this.writer.write("dump \n");
     while (true) {
       const { value, done } = await this.reader.read();
-      var command = value.split('=');
-      for (var key in  this.configuration) {
+      console.log(value);
+      console.log(done);
+      //var command = value.split('=');
+      /*for (var key in  this.configuration) {
         if(key === command[0]){
           this.configuration[key] = command[1];
           console.log("Setting " + key +" to:" + command[1]);
         }
-      }
+      }*/
       if (done) {
         this.reader.releaseLock();
         break;
@@ -100,7 +106,7 @@ if (webSerial && webSerial.serial) {
     const { usbProductId, usbVendorId } = port.getInfo();
     console.log(usbVendorId);
 
-    await port.open({ baudRate: 115200,databits: 7,  stopbits: 1, parity: "none" ,flowControl: "none"});
+    await port.open({ baudRate: 115200,databits: 8,  stopbits: 1, parity: "none" ,flowControl: "none"});
 
     const [appReadable, devReadable] = port.readable.tee();
 

@@ -24,34 +24,15 @@
 
 <div *ngIf="isConnnected">
 
-<mat-card class="setting-card">
-  <mat-card-title>Pusher</mat-card-title>
-  <mat-card-subtitle>Tune firing speed and relaiability</mat-card-subtitle>
 
-    <ul class="setting-container">
-      <li class="setting-row">
-        <label class="label">Pull time</label>
-        <label class="value">{{configuration.pusher_pull_time}} milli seconds</label>
-      </li>
-      <li class="setting-row">
-            <mat-slider class="input" [max]="100" [min]="1" [step]="1"   [(ngModel)]="configuration.pusher_pull_time"></mat-slider>
-      </li>
-    </ul>
-
-  <ul class="setting-container">
-    <li class="setting-row">
-      <label class="label">Push time</label>
-      <label class="value">{{configuration.pusher_push_time}} milli seconds</label>
-    </li>
-    <li class="setting-row">
-         <mat-slider class="input" [max]="100" [min]="1" [step]="1"   [(ngModel)]="configuration.pusher_push_time"></mat-slider>
-    </li>
-  </ul>
-</mat-card>
 
 <mat-card class="setting-card">
   <mat-card-title>Flywheel</mat-card-title>
-  <mat-card-subtitle>Tune flyheel power</mat-card-subtitle>
+  <mat-card-subtitle>Tune flyheel power. The following parameters are used to set the maximum speed of the flywheel motors
+  and the time required to reach such speed. The higher the spee the more poworfull the shoot but at the cost of wearing the bullets.
+  The ramp up time will prevent to blaster from shooting before such time is elapsed ensuring the flywheelas reached its desired speed.
+  The Spin different allows to run the upper wheel slightily faster imposing a backword speen on the bullet to acheive a longer trajectory.
+  </mat-card-subtitle>
 
 
     <ul class="setting-container">
@@ -87,24 +68,88 @@
 </mat-card>
 
 <mat-card class="setting-card">
-  <mat-card-title>Fire Modes</mat-card-title>
-  <mat-card-subtitle></mat-card-subtitle>
+  <mat-card-title>Pusher</mat-card-title>
+  <mat-card-subtitle>
+    Tune firing speed and relaiability. The following parameters are used to calibrate the solenoid pusher
+    the higher the values the more reliable the pusher will behaive but the longer it will take between shoots.
+  </mat-card-subtitle>
 
-<ul style="   list-style-type: none;">
-  <li>
-    <mat-slide-toggle [(ngModel)]="isSingleShot">Single shot</mat-slide-toggle>
-  </li>
-  <li>
-    <mat-slide-toggle [(ngModel)]="isBurstShots">Burst shots</mat-slide-toggle>
-  </li>
-  <li>
-    <mat-slide-toggle [(ngModel)]="isFullAuto">Full auto</mat-slide-toggle>
-    </li>
+    <ul class="setting-container">
+      <li class="setting-row">
+        <label class="label">Pull time</label>
+        <label class="value">{{configuration.pusher_pull_time}} milli seconds</label>
+      </li>
+      <li class="setting-row">
+            <mat-slider class="input" [max]="100" [min]="1" [step]="1"   [(ngModel)]="configuration.pusher_pull_time"></mat-slider>
+      </li>
     </ul>
 
-
+  <ul class="setting-container">
+    <li class="setting-row">
+      <label class="label">Push time</label>
+      <label class="value">{{configuration.pusher_push_time}} milli seconds</label>
+    </li>
+    <li class="setting-row">
+         <mat-slider class="input" [max]="100" [min]="1" [step]="1"   [(ngModel)]="configuration.pusher_push_time"></mat-slider>
+    </li>
+  </ul>
 </mat-card>
 
+
+
+<mat-card class="setting-card">
+  <mat-card-title>Inactivity Timeout</mat-card-title>
+  <mat-card-subtitle>Automatically switch off the blaster if inactive for a certain period of time. This parameter allows to inadvertitly dischanrging the battery.
+  </mat-card-subtitle>
+
+
+    <ul class="setting-container">
+      <li class="setting-row">
+        <label class="label">Timeout minutes</label>
+        <label class="value">{{configuration.inactivity_time_out}} minutes</label>
+      </li>
+      <li class="setting-row">
+            <mat-slider class="input" [max]="60" [min]="0" [step]="5"   [(ngModel)]="configuration.inactivity_time_out"></mat-slider>
+      </li>
+    </ul>
+</mat-card>
+
+<mat-card class="setting-card">
+  <mat-card-title>Battery Protection</mat-card-title>
+  <mat-card-subtitle>Automatically switch off if battery voltage too low. This parameter prevents to inadvertitly damage the LiPo battery by running its volate too low.
+  Important! For a reliable voltage reading the blaster should be calibrated at least once.</mat-card-subtitle>
+
+
+    <ul class="setting-container">
+      <li class="setting-row">
+        <label class="label">Warning voltage</label>
+        <label class="value">{{configuration.warning_vbat}} volt</label>
+      </li>
+      <li class="setting-row">
+            <mat-slider class="input" [max]="14" [min]="0" [step]="1"   [(ngModel)]="configuration.warning_vbat"></mat-slider>
+      </li>
+    </ul>
+
+    <ul class="setting-container">
+      <li class="setting-row">
+        <label class="label">Critical voltage</label>
+        <label class="value">{{configuration.critical_vbat}} volt</label>
+      </li>
+      <li class="setting-row">
+            <mat-slider class="input" [max]="14" [min]="0" [step]="1"   [(ngModel)]="configuration.critical_vbat"></mat-slider>
+      </li>
+    </ul>
+
+    <ul class="setting-container">
+      <li class="setting-row">
+        <label class="label">Analog voltage read scale </label>
+        <label class="value">{{configuration.vbat_scale}}</label>
+      </li>
+      <li class="setting-row">
+            <mat-slider class="input" [max]="100" [min]="1" [step]="1"   [(ngModel)]="configuration.vbat_scale"></mat-slider>
+      </li>
+    </ul>
+</mat-card>
 
 
 
