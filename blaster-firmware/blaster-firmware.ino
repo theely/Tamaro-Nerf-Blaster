@@ -73,8 +73,8 @@ ConfigParam config_params[9] = {
   ConfigParam{"min_rampup_time",140,500,0,&configuration.min_rampup_time},
   ConfigParam{"spin_differential",150,300,0,&configuration.spin_differential},
   ConfigParam{"inactivity_time_out",30,60,0,&configuration.inactivity_time_out},
-  ConfigParam{"warning_vbat",10,14,5,&configuration.warning_vbat},
-  ConfigParam{"critical_vbat",9,14,5,&configuration.critical_vbat},
+  ConfigParam{"warning_vbat",10,14,0,&configuration.warning_vbat},
+  ConfigParam{"critical_vbat",9,14,0,&configuration.critical_vbat},
   ConfigParam{"vbat_scale",12,100,1,&configuration.vbat_scale},
 };
 
@@ -121,7 +121,7 @@ unsigned long vabt_warning_timer = 0;
 
 void setup() {
 
-  Serial.begin(SERIAL_SPEED);
+  Serial.begin(SERIAL_SPEED,SERIAL_8N1);
 
 
   ESC1.attach(esc1Pin);
@@ -210,7 +210,7 @@ void loop() {
   state = getState();
 
 
-  if(getLiPoVoltage() < configuration.warning_vbat){
+  if(configuration.warning_vbat> 0 && getLiPoVoltage() < configuration.warning_vbat){
       if(vabt_warning_timer =0 || (millis() - vabt_warning_timer)  > 3000){
         beep beeps[2];
         beeps[0]= {1, short_beep};
@@ -219,7 +219,7 @@ void loop() {
         vabt_warning_timer = millis();
       }
   }
-  if(getLiPoVoltage() < configuration.critical_vbat){
+  if(configuration.critical_vbat > 0 && getLiPoVoltage() < configuration.critical_vbat){
     state = PowerOFF;
   }
   
@@ -523,7 +523,7 @@ float getLiPoVoltage(){
 
   float value = analogRead(A1); 
   float voltage = (value + 0.5) * 5.0 / 1023.0 *   ((float) configuration.vbat_scale); //adj_multiplier
-  //Calibration formula: current_adj_multiplier * (actual_vbat / measured_vbat) = new_adj_multiplier
+  //Calibration formula: current_scale * (actual_vbat / measured_vbat) = new_scale
 
   //To deal with battery sag voltage is measured as exponential moving average.
   if(vbat_avg == 0){
