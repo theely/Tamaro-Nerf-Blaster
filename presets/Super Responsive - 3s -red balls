@@ -1,0 +1,9 @@
+pusher_pull_time=50
+pusher_push_time=50
+esc_max_power=1400
+min_rampup_time=60
+spin_differential=150
+inactivity_time_out=30
+warning_vbat=11
+critical_vbat=10
+vbat_scale=12
