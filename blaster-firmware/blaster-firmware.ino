@@ -117,7 +117,7 @@ unsigned long power_timeout = short_beep*4 + 300; //shoutdown after 4 beeps
 unsigned long inactivity_timer = 0;
 unsigned long inactivity_timeout = 0; 
 
-unsigned long vabt_warning_timer = 0; 
+unsigned long vabt_warning_timer = millis(); 
 
 void setup() {
 
@@ -155,6 +155,9 @@ void setup() {
 
   inactivity_timeout = ((unsigned long) configuration.inactivity_time_out) * 1000 * 60;
   inactivity_timer = millis();
+
+  //initialize LiPo voltage
+  getLiPoVoltage();
 }
 
 void loop() {
@@ -211,7 +214,7 @@ void loop() {
 
 
   if(configuration.warning_vbat> 0 && getLiPoVoltage() < configuration.warning_vbat){
-      if(vabt_warning_timer =0 || (millis() - vabt_warning_timer)  > 3000){
+      if((millis() - vabt_warning_timer)  > 10000){
         beep beeps[2];
         beeps[0]= {1, short_beep};
         beeps[1]= {1, short_beep};
@@ -529,7 +532,7 @@ float getLiPoVoltage(){
   if(vbat_avg == 0){
     vbat_avg = voltage;
   }else{
-    static float alpha = 0.2; //must be between 0 and 1, the higher the faster it converges 
+    static float alpha = 0.001; //must be between 0 and 1, the higher the faster it converges 
     vbat_avg = (alpha * voltage) + (1.0 - alpha) * vbat_avg;
   }
 
