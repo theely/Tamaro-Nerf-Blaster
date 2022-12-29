@@ -157,7 +157,7 @@ void setup() {
   inactivity_timer = millis();
 
   //initialize LiPo voltage
-  getLiPoVoltage();
+  getAvgLiPoVoltage();
 }
 
 void loop() {
@@ -213,7 +213,7 @@ void loop() {
   state = getState();
 
 
-  if(configuration.warning_vbat> 0 && getLiPoVoltage() < configuration.warning_vbat){
+  if(configuration.warning_vbat> 0 && getAvgLiPoVoltage() < configuration.warning_vbat){
       if((millis() - vabt_warning_timer)  > 10000){
         beep beeps[2];
         beeps[0]= {1, short_beep};
@@ -222,7 +222,7 @@ void loop() {
         vabt_warning_timer = millis();
       }
   }
-  if(configuration.critical_vbat > 0 && getLiPoVoltage() < configuration.critical_vbat){
+  if(configuration.critical_vbat > 0 && getAvgLiPoVoltage() < configuration.critical_vbat){
     state = PowerOFF;
   }
   
@@ -515,9 +515,6 @@ void dump(){
 
 
 
-
-float vbat_avg = 0;
-
 float getLiPoVoltage(){
 
   //https://www.arduino.cc/reference/en/language/functions/analog-io/analogread/
@@ -527,6 +524,16 @@ float getLiPoVoltage(){
   float value = analogRead(A1); 
   float voltage = (value + 0.5) * 5.0 / 1023.0 *   ((float) configuration.vbat_scale); //adj_multiplier
   //Calibration formula: current_scale * (actual_vbat / measured_vbat) = new_scale
+
+  return voltage;
+  }
+
+
+float vbat_avg = 0;
+
+float getAvgLiPoVoltage(){
+
+  float voltage = getLiPoVoltage();
 
   //To deal with battery sag voltage is measured as exponential moving average.
   if(vbat_avg == 0){
