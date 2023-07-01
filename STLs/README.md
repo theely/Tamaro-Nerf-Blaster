@@ -80,5 +80,5 @@ Tracking quality assurance parts printing tests and potential improvments.
 
 | Part | Date | Status| Notes|
 |---|---|---|---|
-|Magwell|30-06-2023|Printing|
+|Barrel|30-06-2023|Printing|
 
