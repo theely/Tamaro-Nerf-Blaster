@@ -74,3 +74,11 @@ This piece is optional and only needed if you would like to power the bluster wi
 - Bridging: Yes
 - Infil: 15%
 
+
+# QA
+Tracking quality assurance parts printing tests and potential improvments.
+
+| Part | Date | Status| Status|
+|---|---|---|---|
+|Magwell|30-06-2023|Printing|
+
