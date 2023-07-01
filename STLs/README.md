@@ -80,5 +80,5 @@ Tracking quality assurance parts printing tests and potential improvments.
 
 | Part | Date | Status| Notes|
 |---|---|---|---|
-|Barrel|30-06-2023|Printing|
+|Barrel|30-06-2023|No issues| Fast printing helps with overhangs | 
 
