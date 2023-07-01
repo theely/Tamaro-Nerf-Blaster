@@ -78,7 +78,7 @@ This piece is optional and only needed if you would like to power the bluster wi
 # QA
 Tracking quality assurance parts printing tests and potential improvments.
 
-| Part | Date | Status| Status|
+| Part | Date | Status| Notes|
 |---|---|---|---|
 |Magwell|30-06-2023|Printing|
 
