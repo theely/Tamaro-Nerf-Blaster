@@ -89,6 +89,7 @@ Tracking quality assurance parts printing tests and potential improvments.
 |Clamp Back|02-07-2023|No printing issues|  | 
 |Motor Plates|02-07-2023|No printing issues|  | 
 |Trigger|02-07-2023|Printing|  | 
+|Pusher|02-07-2023|Printing|  | 
 
 
 
