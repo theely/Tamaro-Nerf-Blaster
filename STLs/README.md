@@ -84,7 +84,8 @@ Tracking quality assurance parts printing tests and potential improvments.
 |Magwell|30-06-2023|No printing issues| Not an issue but one wall is too narrow and might end up with a small hole | 
 |Handle L|02-07-2023|No printing issues|  | 
 |Handle R|02-07-2023|No printing issues|  | 
-|Clamp Front|02-07-2023|Printing|  | 
+|Clamp Front|02-07-2023|No printing issues|  | 
+|Clamp Back|02-07-2023|Printing|  | 
 
 
 
