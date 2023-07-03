@@ -32,6 +32,7 @@ Each STL part has already been placed with the best possible orientation to redu
 - Support: No
 - Bridging: No
 - Infil: 40%
+- Top and Bottom solid layers: 5+
 
 ## Clamp Front
 - Support: No
@@ -86,7 +87,8 @@ Tracking quality assurance parts printing tests and potential improvments.
 |Handle R|02-07-2023|No printing issues|  | 
 |Clamp Front|02-07-2023|No printing issues|  | 
 |Clamp Back|02-07-2023|No printing issues|  | 
-|Motor Plates|02-07-2023|Printing|  | 
+|Motor Plates|02-07-2023|No printing issues|  | 
+|Trigger|02-07-2023|Printing|  | 
 
 
 
