@@ -83,6 +83,9 @@ Tracking quality assurance parts printing tests and potential improvments.
 |Barrel|30-06-2023 |No printing issues| Fast printing helps with overhangs | 
 |Magwell|30-06-2023|No printing issues| Not an issue but one wall is too narrow and might end up with a small hole | 
 |Handle L|02-07-2023|No printing issues|  | 
-|Handle r|02-07-2023|Printing|  | 
+|Handle R|02-07-2023|No printing issues|  | 
+|Clamp Front|02-07-2023|Printing|  | 
+
+
 
 
