@@ -67,6 +67,8 @@ Each STL part has already been placed with the best possible orientation to redu
 ## Pusher
 - Support: Yes
 - Bridging: Yes
+- Top and Bottom solid layers: 5+
+- Perimeters: 5+
 - Infil: 50%
 
 ## Battery Holder (optional)
