@@ -52,6 +52,10 @@ Each STL part has already been placed with the best possible orientation to redu
   Support for cureved and angled surfaces can be supressed. 
 - Bridging: Yes
 - Infil: 15%
+- Brim: Optionally consider adding a custom brim (see screenshot, four 1 layer squares) to prevent warping.
+  
+![Screenshot 2023-07-05 at 13 17 26](https://github.com/theely/Tamaro-Nerf-Blaster/assets/2025999/3a38033f-c280-4b78-80a4-900c0445813e)
+
 
 
 ## Battery Hatch
@@ -92,7 +96,8 @@ Tracking quality assurance parts printing tests and potential improvments.
 |Motor Plates|02-07-2023|No printing issues|  | 
 |Trigger|02-07-2023|No printing issues|  | 
 |Pusher|02-07-2023|No printing issues|  | 
-|Shell Fron|05-07-2023|Printing|  | 
+|Shell Frot|05-07-2023|No printing issues|  | 
+|Shell Back|05-07-2023|Printing| Add custom brim | 
 
 
 
