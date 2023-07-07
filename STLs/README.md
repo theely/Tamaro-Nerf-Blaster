@@ -97,7 +97,7 @@ Tracking quality assurance parts printing tests and potential improvments.
 |Trigger|02-07-2023|No printing issues|  | 
 |Pusher|02-07-2023|No printing issues|  | 
 |Shell Frot|05-07-2023|No printing issues|  | 
-|Shell Back|05-07-2023|Printing| Add custom brim | 
+|Shell Back|05-07-2023|Issue: remove lithium battery spacing| Add custom brim | 
 
 
 
