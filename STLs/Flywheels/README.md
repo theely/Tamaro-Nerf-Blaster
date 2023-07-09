@@ -6,14 +6,14 @@ Each STL part has already been placed with the best possible orientation to redu
 ## EMAX RS2205 Flywheel
 - Support: No
 - Bridging: No
-- Infil: No
+- Infil: Rectilinear (important!) 20%
 - Top solid layers: 5+
 - Perimeters: 5+
 
 ## T-Motor 2205 Flywheel
 - Support: No
 - Bridging: No
-- Infil: No
+- Infil: Rectilinear (important!) 20%
 - Top solid layers: 5+
 - Perimeters: 5+
 
