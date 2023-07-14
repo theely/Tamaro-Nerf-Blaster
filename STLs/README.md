@@ -87,17 +87,17 @@ Tracking quality assurance parts printing tests and potential improvments.
 
 | Part | Date | Status| Notes|
 |---|---|---|---|
-|Barrel|30-06-2023 |No printing issues| Fast printing helps with overhangs | 
-|Magwell|30-06-2023|No printing issues| Not an issue but one wall is too narrow and might end up with a small hole | 
-|Handle L|02-07-2023|No printing issues|  | 
-|Handle R|02-07-2023|No printing issues|  | 
-|Clamp Front|02-07-2023|No printing issues|  | 
-|Clamp Back|02-07-2023|No printing issues|  | 
-|Motor Plates|02-07-2023|No printing issues|  | 
-|Trigger|02-07-2023|No printing issues|  | 
-|Pusher|02-07-2023|No printing issues|  | 
-|Shell Frot|05-07-2023|No printing issues|  | 
-|Shell Back|05-07-2023|Issue: remove lithium battery spacing| Add custom brim | 
+|Handle L|14-07-2023|Not yet printed|  | 
+|Handle R|14-07-2023|Not yet printed|  | 
+|Shell Back|14-07-2023|Printing| Add custom brim | 
+|Barrel|30-06-2023 |Assembled no issues| Fast printing helps with overhangs | 
+|Magwell|30-06-2023|Assembled no issues| Not an issue but one wall is too narrow and might end up with a small hole | 
+|Clamp Front|02-07-2023|Assembled no issues|  | 
+|Clamp Back|02-07-2023|Assembled no issues|  | 
+|Motor Plates|02-07-2023|Assembled no issues|  | 
+|Trigger|02-07-2023|Assembled no issues|  | 
+|Pusher|02-07-2023|Assembled no issues|  | 
+|Shell Frot|05-07-2023|Assembled no issues|  | 
 
 
 
