@@ -18,12 +18,13 @@
 
     <h2> How to connect</h2>
 
+
     <mat-grid-list cols="2" >
       <mat-grid-tile>
         <mat-card class="help-card">
           <mat-card-header>
             <mat-card-title>Step 1</mat-card-title>
-            <mat-card-subtitle>Connect USB</mat-card-subtitle>
+            <mat-card-subtitle>Connect USB-C cable</mat-card-subtitle>
           </mat-card-header>
           <img mat-card-image src="assets/img/tamaro-usbc-connected.jpg">
           <mat-card-content>
@@ -37,7 +38,7 @@
           <mat-card class="help-card">
             <mat-card-header>
               <mat-card-title>Step 2</mat-card-title>
-              <mat-card-subtitle>Select Device</mat-card-subtitle>
+              <mat-card-subtitle>Select Device and Connect</mat-card-subtitle>
             </mat-card-header>
             <img mat-card-image src="assets/img/select-device.jpg" >
             <mat-card-content>
@@ -48,13 +49,30 @@
           </mat-card>
         </mat-card></mat-grid-tile>
     </mat-grid-list>
+
+
+
+
+
   </main>
 
 </div>
 
 <div *ngIf="isConnnected">
 
+<header>
+  
+  <button mat-raised-button color="accent" (click)="getConfigDump()" ><mat-icon aria-hidden="false" fontIcon="downloading"></mat-icon> Download Settings</button>
+  <button mat-raised-button color="accent" (click)="getConfigDump()" ><mat-icon aria-hidden="false" fontIcon="publish"></mat-icon>  Upload Settings</button>
+  <button mat-raised-button color="accent" (click)="getVersion()" ><mat-icon aria-hidden="false" fontIcon="cloud_circle"></mat-icon>Community Presets</button>
+
+</header>
+
+ 
   <main>
+
+
+   
 
     <mat-card class="setting-card">
       <mat-card-header>
@@ -142,30 +160,6 @@
     </mat-card>
 
 
-
-    <mat-card class="setting-card">
-      <mat-card-header>
-        <mat-card-title>Inactivity Timeout</mat-card-title>
-        <mat-card-subtitle>Automatically switch off the blaster if inactive for a certain period of time. This parameter
-          allows to inadvertitly dischanrging the battery.
-        </mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-
-
-        <ul class="setting-container">
-          <li class="setting-row">
-            <label class="label">Timeout minutes</label>
-            <label class="value">{{configuration.inactivity_time_out}} minutes</label>
-          </li>
-          <li class="setting-row">
-            <mat-slider class="input" [max]="60" [min]="0" [step]="5"
-              [(ngModel)]="configuration.inactivity_time_out"></mat-slider>
-          </li>
-        </ul>
-      </mat-card-content>
-    </mat-card>
-
     <mat-card class="setting-card">
       <mat-card-header>
         <mat-card-title>Battery Protection</mat-card-title>
@@ -211,9 +205,5 @@
       </mat-card-content>
     </mat-card>
 
-
-
-    <button mat-raised-button color="primary" (click)="getConfigDump()" class="save">Load</button>
-    <button mat-raised-button color="primary" (click)="pushConfiguration($event)" class="save">Save</button>
   </main>
 </div>
