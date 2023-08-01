@@ -1,0 +1,22 @@
+/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+
+$my-palette: mat.$indigo-palette;
+
+@include mat.core();
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; background-color: whitesmoke;}
+
+h1 {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+
+
+mat-slider {
+  width: 100%;
+  min-width: 200px;
+
+}

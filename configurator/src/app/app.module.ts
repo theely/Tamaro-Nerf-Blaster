@@ -3,16 +3,22 @@ import { BrowserModule } from '@angular/platform-browser';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FormsModule } from '@angular/forms';
+import {Component} from '@angular/core';
 
-import {MatLegacyButtonModule as MatButtonModule} from '@angular/material/legacy-button';
-import {MatLegacyInputModule as MatInputModule} from '@angular/material/legacy-input';
-import {MatLegacyTabsModule as MatTabsModule} from '@angular/material/legacy-tabs';
-import {MatLegacyCardModule as MatCardModule} from '@angular/material/legacy-card';
+import {MatToolbarModule} from '@angular/material/toolbar';
+import {MatIconModule} from '@angular/material/icon';
+import {MatButtonModule} from '@angular/material/button';
+import {MatInputModule} from '@angular/material/input';
+import {MatTabsModule} from '@angular/material/tabs';
+import {MatCardModule} from '@angular/material/card';
 import {MatDividerModule} from '@angular/material/divider';
-import {MatLegacySliderModule as MatSliderModule} from '@angular/material/legacy-slider';
+import {MatSliderModule} from '@angular/material/slider';
 import {MatGridListModule} from '@angular/material/grid-list';
 import {MatCommonModule} from '@angular/material/core';
-import {MatLegacySlideToggleModule as MatSlideToggleModule} from '@angular/material/legacy-slide-toggle';
+import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+import {MatSidenavModule} from '@angular/material/sidenav';
+
+
 
 
 
@@ -22,6 +28,8 @@ import {MatLegacySlideToggleModule as MatSlideToggleModule} from '@angular/mater
   ],
   imports: [
     MatCommonModule,
+    MatToolbarModule,
+    MatSidenavModule,
     FormsModule,
     BrowserModule,
     BrowserAnimationsModule,
@@ -32,7 +40,8 @@ import {MatLegacySlideToggleModule as MatSlideToggleModule} from '@angular/mater
     MatDividerModule,
     MatSliderModule,
     MatGridListModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatIconModule
   ],
   providers: [],
   bootstrap: [AppComponent]
