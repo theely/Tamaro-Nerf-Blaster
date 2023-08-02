@@ -38,7 +38,7 @@ export class AppComponent implements OnInit {
   //Web serial doc: https://web.dev/serial/
 
   async getVersion() {
-    
+
     await this.writer.write("version \n");
     var message = "";
     while (true) {
@@ -106,14 +106,11 @@ export class AppComponent implements OnInit {
 
       await port.open({ baudRate: 115200, databits: 8, stopbits: 1, parity: "none", flowControl: "none" });
 
-     const [appReadable, devReadable] = port.readable.tee();
-
 
       const textDecoder = new TextDecoderStream();
-      const readableStreamClosed = appReadable.pipeTo(textDecoder.writable);
+      const inputDone = port.readable.pipeTo(textDecoder.writable);
       this.reader = textDecoder.readable.pipeThrough(new TransformStream(new LineBreakTransformer())).getReader();
 
- 
       const textEncoder = new TextEncoderStream();
       const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
       this.writer = textEncoder.writable.getWriter();
