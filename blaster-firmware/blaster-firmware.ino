@@ -303,7 +303,7 @@ void loop() {
 
   //keep this statement at end of the loop
   if (previous_state != state) {
-    Serial.println(statesNames[state]);
+    //Serial.println(statesNames[state]);
     previous_state = state;
     if(state!=PoweringDown){
       inactivity_timer = millis(); 

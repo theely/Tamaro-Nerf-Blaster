@@ -19,7 +19,7 @@
     <h2> How to connect</h2>
 
 
-    <mat-grid-list cols="2" >
+    <mat-grid-list cols="2">
       <mat-grid-tile>
         <mat-card class="help-card">
           <mat-card-header>
@@ -40,7 +40,7 @@
               <mat-card-title>Step 2</mat-card-title>
               <mat-card-subtitle>Select Device and Connect</mat-card-subtitle>
             </mat-card-header>
-            <img mat-card-image src="assets/img/select-device.jpg" >
+            <img mat-card-image src="assets/img/select-device.jpg">
             <mat-card-content>
               <p style="margin-top: 10px;">
                 From the davices list select "USB Serial" and click on Connect
@@ -60,19 +60,22 @@
 
 <div *ngIf="isConnnected">
 
-<header>
-  
-  <button mat-raised-button color="accent" (click)="getConfigDump()" ><mat-icon aria-hidden="false" fontIcon="downloading"></mat-icon> Download Settings</button>
-  <button mat-raised-button color="accent" (click)="getConfigDump()" ><mat-icon aria-hidden="false" fontIcon="publish"></mat-icon>  Upload Settings</button>
-  <button mat-raised-button color="accent" (click)="getVersion()" ><mat-icon aria-hidden="false" fontIcon="cloud_circle"></mat-icon>Community Presets</button>
+  <header>
 
-</header>
+    <button mat-raised-button color="accent" (click)="getConfigDump()"><mat-icon aria-hidden="false"
+        fontIcon="downloading"></mat-icon> Download Settings</button>
+    <button mat-raised-button color="accent" (click)="getConfigDump()"><mat-icon aria-hidden="false"
+        fontIcon="publish"></mat-icon> Upload Settings</button>
+    <button mat-raised-button color="accent" (click)="getVersion()"><mat-icon aria-hidden="false"
+        fontIcon="cloud_circle"></mat-icon>Community Presets</button>
 
- 
+  </header>
+
+
   <main>
 
 
-   
+
 
     <mat-card class="setting-card">
       <mat-card-header>
@@ -95,8 +98,11 @@
             <label class="value">{{configuration.esc_max_power}} %</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="2000" [min]="1200" [step]="1"
-              [(ngModel)]="configuration.esc_max_power"></mat-slider>
+
+            <mat-slider class="input" [max]="2000" [min]="1200" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.esc_max_power" #slider>
+            </mat-slider>
+
           </li>
         </ul>
 
@@ -106,8 +112,9 @@
             <label class="value">{{configuration.min_rampup_time}} milli seconds</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="500" [min]="10" [step]="1"
-              [(ngModel)]="configuration.min_rampup_time"></mat-slider>
+            <mat-slider class="input" [max]="500" [min]="10" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.min_rampup_time" #slider>
+            </mat-slider>
           </li>
         </ul>
 
@@ -118,8 +125,9 @@
             <label class="value">{{configuration.spin_differential}}</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="500" [min]="0" [step]="10"
-              [(ngModel)]="configuration.spin_differential"></mat-slider>
+            <mat-slider class="input" [max]="500" [min]="0" [step]="10">
+              <input matSliderThumb [(ngModel)]="configuration.spin_differential" #slider>
+            </mat-slider>
           </li>
         </ul>
       </mat-card-content>
@@ -141,8 +149,9 @@
             <label class="value">{{configuration.pusher_pull_time}} milli seconds</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="100" [min]="1" [step]="1"
-              [(ngModel)]="configuration.pusher_pull_time"></mat-slider>
+            <mat-slider class="input" [max]="100" [min]="1" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.pusher_pull_time" #slider>
+            </mat-slider>
           </li>
         </ul>
 
@@ -152,8 +161,9 @@
             <label class="value">{{configuration.pusher_push_time}} milli seconds</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="100" [min]="1" [step]="1"
-              [(ngModel)]="configuration.pusher_push_time"></mat-slider>
+            <mat-slider class="input" [max]="100" [min]="1" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.pusher_push_time" #slider>
+            </mat-slider>
           </li>
         </ul>
       </mat-card-content>
@@ -176,8 +186,9 @@
             <label class="value">{{configuration.warning_vbat}} volt</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="14" [min]="0" [step]="1"
-              [(ngModel)]="configuration.warning_vbat"></mat-slider>
+            <mat-slider class="input" [max]="14" [min]="0" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.warning_vbat" #slider>
+            </mat-slider>
           </li>
         </ul>
 
@@ -187,8 +198,9 @@
             <label class="value">{{configuration.critical_vbat}} volt</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="14" [min]="0" [step]="1"
-              [(ngModel)]="configuration.critical_vbat"></mat-slider>
+            <mat-slider class="input" [max]="14" [min]="0" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.critical_vbat" #slider>
+            </mat-slider>
           </li>
         </ul>
 
@@ -198,8 +210,9 @@
             <label class="value">{{configuration.vbat_scale}}</label>
           </li>
           <li class="setting-row">
-            <mat-slider class="input" [max]="100" [min]="1" [step]="1"
-              [(ngModel)]="configuration.vbat_scale"></mat-slider>
+            <mat-slider class="input" [max]="100" [min]="1" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.vbat_scale" #slider>
+            </mat-slider>
           </li>
         </ul>
       </mat-card-content>
