@@ -89,9 +89,9 @@ Tracking quality assurance parts printing tests and potential improvments.
 |---|---|---|---|
 |Handle L|14-07-2023|Not yet printed|  | 
 |Handle R|14-07-2023|Not yet printed|  | 
-|Shell Back|14-07-2023|Printing| Add custom brim | 
+|Shell Back|14-07-2023|Assembled no issues| Add custom brim | 
 |Barrel|30-06-2023 |Assembled no issues| Fast printing helps with overhangs | 
-|Magwell|30-06-2023|Assembled no issues| Not an issue but one wall is too narrow and might end up with a small hole | 
+|Magwell|30-06-2023|Printing| Not an issue but one wall is too narrow and might end up with a small hole | 
 |Clamp Front|02-07-2023|Assembled no issues|  | 
 |Clamp Back|02-07-2023|Assembled no issues|  | 
 |Motor Plates|02-07-2023|Assembled no issues|  | 
