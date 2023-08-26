@@ -58,7 +58,7 @@
 
 </div>
 
-<div *ngIf="isConnnected">
+<div *ngIf="!isConnnected">
 
   <header>
 
@@ -66,8 +66,8 @@
         fontIcon="downloading"></mat-icon> Download Settings</button>
     <button mat-raised-button color="accent" (click)="getConfigDump()"><mat-icon aria-hidden="false"
         fontIcon="publish"></mat-icon> Upload Settings</button>
-    <button mat-raised-button color="accent" (click)="getVersion()"><mat-icon aria-hidden="false"
-        fontIcon="cloud_circle"></mat-icon>Community Presets</button>
+    <!-- <button mat-raised-button color="accent" (click)="getVersion()"><mat-icon aria-hidden="false"
+        fontIcon="cloud_circle"></mat-icon>Community Presets</button> -->
 
   </header>
 
@@ -80,13 +80,12 @@
     <mat-card class="setting-card">
       <mat-card-header>
         <mat-card-title>Flywheel</mat-card-title>
-        <mat-card-subtitle>Tune flyheel power. The following parameters are used to set the maximum speed of the
-          flywheel motors
-          and the time required to reach such speed. The higher the spee the more poworfull the shoot but at the cost of
-          wearing the bullets.
+        <mat-card-subtitle>
+          The following parameters are used to set the maximum speed of the flywheel motors and the time required to reach such speed.<br/>
+          The higher the speed the more powerfull the shoot but at the cost of wearing the bullets.<br/>
           The ramp up time will prevent to blaster from shooting before such time is elapsed ensuring the flywheelas
-          reached its desired speed.
-          The Spin different allows to run the upper wheel slightily faster imposing a backword speen on the bullet to
+          reached its desired speed.<br/>
+          The Spin differential allows to run the upper wheel slightily faster imposing a backword speen on the bullet to
           acheive a longer trajectory.
         </mat-card-subtitle>
       </mat-card-header>
@@ -94,13 +93,27 @@
 
         <ul class="setting-container">
           <li class="setting-row">
-            <label class="label">Max Motor Speed</label>
+            <label class="label">Max speed</label>
             <label class="value">{{configuration.esc_max_power}} %</label>
           </li>
           <li class="setting-row">
 
             <mat-slider class="input" [max]="2000" [min]="1200" [step]="1">
               <input matSliderThumb [(ngModel)]="configuration.esc_max_power" #slider>
+            </mat-slider>
+
+          </li>
+        </ul>
+
+        <ul class="setting-container">
+          <li class="setting-row">
+            <label class="label">Min speed</label>
+            <label class="value">{{configuration.esc_min_power}} %</label>
+          </li>
+          <li class="setting-row">
+
+            <mat-slider class="input" [max]="2000" [min]="1200" [step]="1">
+              <input matSliderThumb [(ngModel)]="configuration.esc_min_power" #slider>
             </mat-slider>
 
           </li>
@@ -121,7 +134,7 @@
 
         <ul class="setting-container">
           <li class="setting-row">
-            <label class="label">Spin Differential</label>
+            <label class="label">Spin differential</label>
             <label class="value">{{configuration.spin_differential}}</label>
           </li>
           <li class="setting-row">
@@ -137,8 +150,8 @@
       <mat-card-header>
         <mat-card-title>Pusher</mat-card-title>
         <mat-card-subtitle>
-          Tune firing speed and relaiability. The following parameters are used to calibrate the solenoid pusher
-          the higher the values the more reliable the pusher will behaive but the longer it will take between shoots.
+          The following parameters are used to calibrate the solenoid pusher.<br/>
+          The higher the values the more reliable the pusher will behaive but the longer it will take between shoots.
         </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
@@ -173,8 +186,8 @@
     <mat-card class="setting-card">
       <mat-card-header>
         <mat-card-title>Battery Protection</mat-card-title>
-        <mat-card-subtitle>Automatically switch off if battery voltage too low. This parameter prevents to inadvertitly
-          damage the LiPo battery by running its volate too low.
+        <mat-card-subtitle>This parameter prevents to inadvertitly
+          damage the LiPo battery by running its volate too low.<br/>
           Important! For a reliable voltage reading the blaster should be calibrated at least once.</mat-card-subtitle>
 
       </mat-card-header>
