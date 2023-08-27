@@ -2,6 +2,7 @@
 #include <EEPROM.h>
 #include <ButtonDebounce.h>
 
+
 #define SERIAL_SPEED 115200
 
 
@@ -12,14 +13,14 @@
 int solenoid = 2;
 int esc1Pin = 3;
 //4 unused
-int powerSwitchPin = 5;
+//5 unused
 int esc2Pin = 6;
 int triggerPin = 7;
 int revPin = 8;
 //9 unused
 //10 unused
-int modeSwitchPin = 11;
-int powerPin = 12;
+// 11 unused
+// 12 unused
 
 int LED = 13;
 
@@ -80,8 +81,8 @@ ConfigParam config_params[9] = {
 
 
 
-enum states {Idle, Rampup, Ready, Fire, Hold,Command, PoweringDown,PowerOFF};
-const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Command","PoweringDown","PowerOFF"};
+enum states {Idle, Rampup, Ready, Fire, Hold, Click, Command};
+const char* statesNames[] = {"Idle", "Rampup", "Ready", "Fire", "Hold", "Click", "Command"};
 
 enum fireRates {Single, Auto, Burst};
 
@@ -96,10 +97,9 @@ String serial_command;
 DShot ESC1(DShot::Mode::DSHOT300INV);
 DShot ESC2(DShot::Mode::DSHOT300INV);
 
-ButtonDebounce revButton(revPin, 15);
-ButtonDebounce triggerButton(triggerPin, 15);
-ButtonDebounce powerButton(powerSwitchPin, 30);
-ButtonDebounce modeButton(modeSwitchPin, 30);
+ButtonDebounce revButton(revPin, 40);
+ButtonDebounce triggerButton(triggerPin, 40);
+
 
 #if defined(__AVR_ATmega328P__)
   int long_beep=130;
@@ -111,18 +111,22 @@ ButtonDebounce modeButton(modeSwitchPin, 30);
 #endif
 
 unsigned long timer_rampup = 0;
-unsigned long timer_power_off = 0;
-unsigned long power_timeout = short_beep*4 + 300; //shoutdown after 4 beeps
-
-unsigned long inactivity_timer = 0;
-unsigned long inactivity_timeout = 0; 
-
 unsigned long vabt_warning_timer = millis(); 
+
+unsigned  int click_count=0;
+unsigned long click_timeout = 500;
+unsigned long inter_click_timer = 0;
+unsigned long inter_click_timeout = 1000;
 
 void setup() {
 
-  Serial.begin(SERIAL_SPEED,SERIAL_8N1);
+  pinMode(solenoid, OUTPUT);
+  digitalWrite(solenoid, LOW);
+  pinMode(LED, OUTPUT); 
+  digitalWrite(LED, LOW);
 
+  Serial.begin(SERIAL_SPEED,SERIAL_8N1);
+  
 
   ESC1.attach(esc1Pin);
   ESC2.attach(esc2Pin);
@@ -132,15 +136,6 @@ void setup() {
   setESC2speed(0); 
 
   analogReference(DEFAULT);
-
-  pinMode(powerPin, OUTPUT);
-  digitalWrite(powerPin, HIGH);
-  
-  pinMode(solenoid, OUTPUT);
-  digitalWrite(solenoid, LOW);
-  
-  pinMode(LED, OUTPUT); 
-  digitalWrite(LED, LOW);
 
   Confing configuration_check;
   EEPROM.get( 0, configuration_check );
@@ -153,8 +148,6 @@ void setup() {
     EEPROM.get( 0, configuration);
   }
 
-  inactivity_timeout = ((unsigned long) configuration.inactivity_time_out) * 1000 * 60;
-  inactivity_timer = millis();
 
   //initialize LiPo voltage
   getAvgLiPoVoltage();
@@ -223,27 +216,10 @@ void loop() {
       }
   }
   if(configuration.critical_vbat > 0 && getAvgLiPoVoltage() < configuration.critical_vbat){
-    state = PowerOFF;
+    //TOODO disable blaster and allert
   }
   
-  
-  if(state == PoweringDown && previous_state != PoweringDown){
-      beep beeps[4];
-      beeps[0]= {4, short_beep};
-      beeps[1]= {3, short_beep};
-      beeps[2]= {2, short_beep};
-      beeps[3]= {1, short_beep};
-      ESC1.sequenceBeep(beeps,4);
-  }
-  if(state == Idle && previous_state==PoweringDown){
-      ESC1.sequenceBeepClear();
-      ESC2.setThrottle(0);
-  }
-  
-  if(state == PowerOFF){
-    digitalWrite(powerPin, LOW);
-  }
-
+ 
 
   if (state == Rampup || state == Ready || state == Fire ) { 
 
@@ -268,10 +244,10 @@ void loop() {
   }
   if (state == Command) {
 
-    
-    setESC1speed(0);
-    delay(320);
-
+    click_count=0;
+    ESC1.setThrottle(0);
+    ESC2.setThrottle(0);
+    delay(300);
      
     if (fireRate == Single) {
       fireRate = Burst;
@@ -297,17 +273,14 @@ void loop() {
       beeps[0]= {4, long_beep};
       beeps[1]= {1, short_beep};
       ESC1.sequenceBeep(beeps,2);
-      
     }
+    delay(300);
   }
 
   //keep this statement at end of the loop
   if (previous_state != state) {
     //Serial.println(statesNames[state]);
     previous_state = state;
-    if(state!=PoweringDown){
-      inactivity_timer = millis(); 
-    }
   } 
   
 }
@@ -317,55 +290,27 @@ enum states getState() {
 
     revButton.update();
     triggerButton.update();
-    powerButton.update();
-    modeButton.update();
 
     int revValue = !revButton.state();
     int triggerValue = !triggerButton.state(); 
-    int powerValue = !powerButton.state();
-    int modeValue = !modeButton.state();
 
   
 
 
   switch (state) {
 
-    case PowerOFF:
-       return PowerOFF;
-       break;
 
-    case Idle:
-      if (modeValue == HIGH) {
-        return Command;
-      }    
-      if (powerValue == HIGH) {
-        timer_power_off= millis(); 
-        return PoweringDown;
-      }
+    case Idle:    
       if (revValue == HIGH) {
         timer_rampup = millis();
         return Rampup;
       }
-      if (inactivity_timeout > 0 && ((millis() - inactivity_timer) > inactivity_timeout)) {
-        timer_power_off= millis(); 
-        return PoweringDown;
+      if (click_count > 1) {
+        return Command;
       }
       return Idle;
       break;
 
-    case PoweringDown :
-       if (powerValue == LOW && ((millis() - inactivity_timer) < inactivity_timeout)) {
-        return Idle;
-       }
-       //pressing any button will exit from timout outo power down
-       if ((revValue == HIGH || revValue == HIGH || powerValue == HIGH || modeValue == HIGH) && ((millis() - inactivity_timer) > inactivity_timeout)) {
-        return Idle;
-       }
-       if ((millis() - timer_power_off) > power_timeout) {
-         return PowerOFF;
-       }
-       return PoweringDown;
-       break; 
        
     case Rampup :
       if (revValue == HIGH && (millis() - timer_rampup) > configuration.min_rampup_time) {
@@ -373,6 +318,15 @@ enum states getState() {
       } 
       if (revValue == HIGH) {
         return Rampup;
+      }
+      if (revValue == LOW && (millis() - timer_rampup) < click_timeout) {
+        if((millis() - inter_click_timer) > inter_click_timeout){
+          click_count=1;
+        }else{
+          click_count++;
+        }
+        inter_click_timer=millis();
+        return Idle;
       }
       break;
 
@@ -404,14 +358,7 @@ enum states getState() {
         return Idle;
       }
       return Hold;
-
-    
-
-    case Command:
-      if (modeValue == HIGH) {
-        return Command;
-      } 
-      return Idle;
+   
 
     default : break;
   }
@@ -447,7 +394,7 @@ void controlESCs(){
     ESC1.setThrottle(esc1ActualSpeed);
   }else if(esc1ActualSpeed>esc1TargetSpeed && (millis() - timer_break_esc1 > 25)){
       timer_break_esc1 = millis();
-      esc1ActualSpeed-=100;
+      esc1ActualSpeed-=150;
       if(esc1ActualSpeed < esc1TargetSpeed){
         esc1ActualSpeed = esc1TargetSpeed;
       }
@@ -459,7 +406,7 @@ void controlESCs(){
     ESC2.setThrottle(esc2ActualSpeed);
   }else if(esc2ActualSpeed>esc2TargetSpeed && (millis() - timer_break_esc2 > 25)){
     timer_break_esc2 = millis();
-    esc2ActualSpeed-=100;
+    esc2ActualSpeed-=150;
     if(esc2ActualSpeed < esc2TargetSpeed){
       esc2ActualSpeed = esc2TargetSpeed;
     }
