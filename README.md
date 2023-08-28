@@ -3,7 +3,9 @@
 
 ![PXL_20230726_122825097 (2)](https://github.com/theely/Tamaro-Nerf-Blaster/assets/2025999/5a9a1784-01d7-4e42-9413-ba4432438db5)
 
-
+## Mounting Instructions
+Full assembly mounting instructions:
+https://medium.com/@EliaPalme/tamaro-nerf-blaster-75f032bfdf08
 
 ## Part Sourcing
 For convenience we offer pre-sourced hardware and electronics kit:
