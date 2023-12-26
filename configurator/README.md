@@ -2,7 +2,7 @@
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 12.2.7.
 
-## To Deploy new versins
+## To Deploy new version
 ng build --base-href https://theely.github.io/Tamaro-Nerf-Blaster/
 
 The compiled app should be deployed into ../docs/
