@@ -392,7 +392,7 @@ void controlESCs(){
   if(esc1ActualSpeed<esc1TargetSpeed){
     esc1ActualSpeed = esc1TargetSpeed;
     ESC1.setThrottle(esc1ActualSpeed);
-  }else if(esc1ActualSpeed>esc1TargetSpeed && (millis() - timer_break_esc1 > 25)){
+  }else if(esc1ActualSpeed>esc1TargetSpeed && (millis() - timer_break_esc1 > 20)){
       timer_break_esc1 = millis();
       esc1ActualSpeed-=150;
       if(esc1ActualSpeed < esc1TargetSpeed){
@@ -404,7 +404,7 @@ void controlESCs(){
   if(esc2ActualSpeed<esc2TargetSpeed){
     esc2ActualSpeed = esc2TargetSpeed;
     ESC2.setThrottle(esc2ActualSpeed);
-  }else if(esc2ActualSpeed>esc2TargetSpeed && (millis() - timer_break_esc2 > 25)){
+  }else if(esc2ActualSpeed>esc2TargetSpeed && (millis() - timer_break_esc2 > 20)){
     timer_break_esc2 = millis();
     esc2ActualSpeed-=150;
     if(esc2ActualSpeed < esc2TargetSpeed){
