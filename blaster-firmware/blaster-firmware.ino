@@ -70,7 +70,7 @@ struct ConfigParam {
 ConfigParam config_params[9] = {
   ConfigParam{"pusher_pull_time",110,500,10,&configuration.pusher_pull_time},
   ConfigParam{"pusher_push_time",90,500,10,&configuration.pusher_push_time},
-  ConfigParam{"esc_max_power",1200,2047,200,&configuration.esc_max_power},
+  ConfigParam{"esc_max_power",1500,2047,200,&configuration.esc_max_power},
   ConfigParam{"min_rampup_time",140,500,0,&configuration.min_rampup_time},
   ConfigParam{"spin_differential",150,300,0,&configuration.spin_differential},
   ConfigParam{"inactivity_time_out",30,60,0,&configuration.inactivity_time_out},
