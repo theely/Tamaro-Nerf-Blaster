@@ -49,7 +49,7 @@ struct Confing {
 Confing configuration = {
   110,         //pusher_pull_time -- min: 65 (tested)
   90,          //pusher_push_time -- min: 55 (tested)
-  1200,        //esc_max_power
+  1500,        //esc_max_power
   140,         //min_rampup_time
   150,         //spin_differential
   30,          //inactivity_time_out
@@ -111,7 +111,7 @@ ButtonDebounce triggerButton(triggerPin, 40);
 #endif
 
 unsigned long timer_rampup = 0;
-unsigned long vabt_warning_timer = millis(); 
+unsigned long vabt_warning_timer = millis();
 
 unsigned  int click_count=0;
 unsigned long click_timeout = 500;
@@ -122,18 +122,18 @@ void setup() {
 
   pinMode(solenoid, OUTPUT);
   digitalWrite(solenoid, LOW);
-  pinMode(LED, OUTPUT); 
+  pinMode(LED, OUTPUT);
   digitalWrite(LED, LOW);
 
   Serial.begin(SERIAL_SPEED,SERIAL_8N1);
-  
+
 
   ESC1.attach(esc1Pin);
   ESC2.attach(esc2Pin);
   ESC1.setThrottle(0);
   ESC2.setThrottle(0);
   setESC1speed(0);
-  setESC2speed(0); 
+  setESC2speed(0);
 
   analogReference(DEFAULT);
 
@@ -181,7 +181,7 @@ void loop() {
       if(strcmp(token, "dump") == 0){
         dump();
       }
-      
+
       if (set_value && variable_name != NULL && variable_value == NULL) {
         variable_value = token;
       }
@@ -218,25 +218,25 @@ void loop() {
   if(configuration.critical_vbat > 0 && getAvgLiPoVoltage() < configuration.critical_vbat){
     //TOODO disable blaster and allert
   }
-  
- 
 
-  if (state == Rampup || state == Ready || state == Fire ) { 
+
+
+  if (state == Rampup || state == Ready || state == Fire ) {
 
     digitalWrite(LED, HIGH);
 
     setESC1speed(configuration.esc_max_power);
     setESC2speed(max(configuration.esc_max_power-configuration.spin_differential,48));
-    
+
   } else {
     digitalWrite(LED, LOW );
 
     setESC1speed(0);
     setESC2speed(0);
   }
-  
+
   if (state == Fire ) {
-    
+
     digitalWrite(solenoid, HIGH);
     delay(configuration.pusher_pull_time);
     digitalWrite(solenoid, LOW);
@@ -248,7 +248,7 @@ void loop() {
     ESC1.setThrottle(0);
     ESC2.setThrottle(0);
     delay(300);
-     
+
     if (fireRate == Single) {
       fireRate = Burst;
       //   short - 3
@@ -259,7 +259,7 @@ void loop() {
       beeps[3]= {1, short_beep};
       ESC1.sequenceBeep(beeps,4);
     } else if (fireRate == Burst) {
-      fireRate = Auto;         
+      fireRate = Auto;
       beep beeps[4];
       beeps[0]= {4, long_beep};
       beeps[1]= {1, short_beep};
@@ -281,8 +281,8 @@ void loop() {
   if (previous_state != state) {
     //Serial.println(statesNames[state]);
     previous_state = state;
-  } 
-  
+  }
+
 }
 
 enum states getState() {
@@ -292,15 +292,15 @@ enum states getState() {
     triggerButton.update();
 
     int revValue = !revButton.state();
-    int triggerValue = !triggerButton.state(); 
+    int triggerValue = !triggerButton.state();
 
-  
+
 
 
   switch (state) {
 
 
-    case Idle:    
+    case Idle:
       if (revValue == HIGH) {
         timer_rampup = millis();
         return Rampup;
@@ -311,11 +311,11 @@ enum states getState() {
       return Idle;
       break;
 
-       
+
     case Rampup :
       if (revValue == HIGH && (millis() - timer_rampup) > configuration.min_rampup_time) {
         return Ready;
-      } 
+      }
       if (revValue == HIGH) {
         return Rampup;
       }
@@ -358,7 +358,7 @@ enum states getState() {
         return Idle;
       }
       return Hold;
-   
+
 
     default : break;
   }
@@ -372,7 +372,7 @@ int esc2ActualSpeed = 0;
 int esc1TargetSpeed = 0;
 int esc2TargetSpeed = 0;
 
- 
+
 long timer_break_esc1 = 0;
 long timer_break_esc2 = 0;
 
@@ -388,7 +388,7 @@ void controlESCs(){
 
 
   //Gradual speed decrease is required to avoid voltage spikes that would accidentally trigger the solenoid
-  
+
   if(esc1ActualSpeed<esc1TargetSpeed){
     esc1ActualSpeed = esc1TargetSpeed;
     ESC1.setThrottle(esc1ActualSpeed);
@@ -413,7 +413,7 @@ void controlESCs(){
     ESC2.setThrottle(esc2ActualSpeed);
   }
 
-  
+
 
 }
 
@@ -444,7 +444,7 @@ void setSerialParam(String param, int value){
       Serial.print(param);
       Serial.print(" set to ");
       Serial.println(value);
-      
+
       return;
     }
   }
@@ -468,7 +468,7 @@ float getLiPoVoltage(){
   //https://skillbank.co.uk/arduino/measure.htm
 
 
-  float value = analogRead(A1); 
+  float value = analogRead(A1);
   float voltage = (value + 0.5) * 5.0 / 1023.0 *   ((float) configuration.vbat_scale); //adj_multiplier
   //Calibration formula: current_scale * (actual_vbat / measured_vbat) = new_scale
 
@@ -486,7 +486,7 @@ float getAvgLiPoVoltage(){
   if(vbat_avg == 0){
     vbat_avg = voltage;
   }else{
-    static float alpha = 0.001; //must be between 0 and 1, the higher the faster it converges 
+    static float alpha = 0.001; //must be between 0 and 1, the higher the faster it converges
     vbat_avg = (alpha * voltage) + (1.0 - alpha) * vbat_avg;
   }
 
