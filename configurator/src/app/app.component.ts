@@ -59,15 +59,13 @@ export class AppComponent implements OnInit {
     await this.writer.write("dump \n");
     while (true) {
       const { value, done } = await this.reader.read();
-      console.log(value);
-      console.log(done);
-      //var command = value.split('=');
-      /*for (var key in  this.configuration) {
+      var command = value.split('=');
+      for (var key in  this.configuration) {
         if(key === command[0]){
           this.configuration[key] = command[1];
           console.log("Setting " + key +" to:" + command[1]);
         }
-      }*/
+      }
       if (done) {
         this.reader.releaseLock();
         break;
@@ -76,8 +74,8 @@ export class AppComponent implements OnInit {
   }
 
 
-  async pushConfiguration(event: Event) {
-
+  async pushConfiguration() {
+    console.log("Pushing new configuration");
     for (var key in this.configuration) {
       var command: string = "set " + key + "=" + this.configuration[key] + "\n";
       console.log(command);
