@@ -63,11 +63,6 @@ Each STL part has already been placed with the best possible orientation to redu
 - Bridging: No
 - Infil: 15%
 
-## Buttons
-- Support: No
-- Bridging: No
-- Infil: 15%
-
 ## Pusher
 - Support: Yes
 - Bridging: Yes
