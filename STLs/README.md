@@ -16,6 +16,7 @@ Each STL part has already been placed with the best possible orientation to redu
 - Infil: 15%
 
 ## Magwell
+- STL files: v1 for legacy magazines, v2 for the latest Nerf version.
 - Support: Yes (custom)  
   Only the very bottom part requires support (see screenshot).
 - Bridging: Yes
