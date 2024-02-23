@@ -11,6 +11,10 @@ https://medium.com/@EliaPalme/tamaro-nerf-blaster-75f032bfdf08
 For convenience we offer pre-sourced hardware and electronics kit:
 https://www.etsy.com/shop/TamaroBlaster
 
+## Tamaro Blaster Configurator
+The configurator allows you to fine-tune the parameters of your blaster. 
+https://theely.github.io/Tamaro-Nerf-Blaster/
+
 ## Design Principles
 
 The Tamaro blaster is inspired by the FDL3 and the OOD Jupiter blasters.
